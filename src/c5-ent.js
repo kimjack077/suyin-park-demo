@@ -77,7 +77,7 @@ RENDERERS.e2=()=>`<div class="grid g2">
 </div>`;
 RENDERERS.e3=()=>`<div class="grid g2">
  <div><div class="sub2">碳排因子库计算 · 表计级 CO₂ 曲线 <span class="req-badge" style="position:static">#73</span></div>
-  <select><option>因子库：2025 全国电网平均排放因子 0.5366 tCO₂/MWh</option><option>因子库：宁夏区域因子（含绿电核减）</option></select>
+  <select><option>因子库：全国电力平均 CO₂ 排放因子 0.5366 tCO₂/MWh（生态环境部发布）</option><option>因子库：宁夏区域因子（含绿电核减）</option></select>
   ${lineChart(["8:00","10:00","12:00","14:00","16:00","18:00","20:00","22:00"],[{name:"CO₂ 排放速率(kg/h)",color:"#2DD4BF",data:[1180,1240,1310,1280,1220,1160,1090,980]}],210,540)}</div>
  <div><div class="sub2">层级碳排聚合 <span class="req-badge" style="position:static">#74</span></div>
   ${hBar([{k:"全厂",v:22.6},{k:"1#厂房",v:12.1},{k:"2#厂房",v:8.3},{k:"动力中心",v:2.2}],160,540," 千tCO₂/年",(it,i)=>["#2DD4BF","#2E8BC0","#FBBF24","#A78BFA"][i])}</div>

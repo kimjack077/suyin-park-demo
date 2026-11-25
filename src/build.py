@@ -8,6 +8,8 @@ OUT = os.path.join(BASE, "苏银产业园AI零碳数智平台-交互原型.html"
 PARTS = ["c2-data-charts.js", "c2b-echarts.js", "c2c-sankey.js", "c3-park.js", "c4-park2.js",
          "c5-ent.js", "c6-ai-iot-init.js", "c7-video-boost.js", "c8-three3d.js",
          "c9-polish.js"]
+# c10 升级层（演示升级：GIS 一张图 / 多级能流碳流 / 报告 8 章节 / 智能体流式问答等），不参与旧版文字剥离
+PARTS_C10 = ["c10a-shell.js", "c10b-cockpit.js", "c10c-onemap.js", "c10d-multi.js", "c10e-report.js", "c10f-ai-iot.js"]
 
 # ---------- 需求映射文字剥离规则（应用于 JS 分块） ----------
 JS_STRIPS = [
@@ -31,6 +33,15 @@ JS_STRIPS = [
     (re.compile(r'req:"[^"]*"'), 'req:""'),
     # 页面副标题中含需求映射的 sub（保留纯功能性描述）
     (re.compile(r'sub:"[^"]*(?:需求|▲#|需源代码)[^"]*"'), 'sub:""'),
+]
+
+# 演示性字样（视频中可见的“演示/模拟”提示）
+JS_STRIPS += [
+    (re.compile(r'\\n演示环境建议点击上方「预置问题」体验完整多轮对话链：[^"]*'), ''),
+    (re.compile(r'（演示环境请使用上方预置问题体验完整能力）'), ''),
+    (re.compile(r'（对应演示[^）]*）'), ''),
+    (re.compile(r'（模拟模式）键入语音提问后点发送'), '请讲，正在识别语音…'),
+    (re.compile(r'——已切换为模拟模式，点击「模拟说唤醒词」体验流程'), ''),
 ]
 
 def strip_js(s):
@@ -81,6 +92,7 @@ for pat, rep in HEAD_STRIPS:
 boost = io.open(os.path.join(SRC, "c1b-extra.html"), encoding="utf-8").read()
 parts = "\n".join(io.open(os.path.join(SRC, f), encoding="utf-8").read() for f in PARTS)
 parts = strip_js(parts)
+parts += "\n" + "\n".join(io.open(os.path.join(SRC, f), encoding="utf-8").read() for f in PARTS_C10)
 out = head + boost + "<script>\n" + parts + "\n</script>\n</body>\n</html>\n"
 io.open(OUT, "w", encoding="utf-8").write(out)
 # 提取主脚本做语法检查

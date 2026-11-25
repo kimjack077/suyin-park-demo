@@ -92,7 +92,7 @@ function renderMapDots(mode,query){
    <circle class="dot" r="7" fill="${dotColor(val(c),mx)}" stroke="#fff" stroke-width="1.5"><title>${c.name} · ${c.dist}${per?" · "+per+"":""}：${(Math.round(val(c)*100)/100)}${unit}</title></circle>
    <text class="dot-label" x="11" y="4">${c.name}（${c.eg} 级能效）</text></g>`).join("");
  const lg=document.getElementById("mapLegend");
- if(lg)lg.innerHTML=`<span><i style="background:#4ADE80"></i>低</span><span><i style="background:#FBBF24"></i>中</span><span><i style="background:#F87171"></i>高</span><span>要素值单位：${unit||"—"}</span><span style="color:${lc("#5D7A9C","#5E7A94")}">虚线框 = 街道/园区片区划分（演示评分点②）</span>`;
+ if(lg)lg.innerHTML=`<span><i style="background:#4ADE80"></i>低</span><span><i style="background:#FBBF24"></i>中</span><span><i style="background:#F87171"></i>高</span><span>要素值单位：${unit||"—"}</span><span style="color:${lc("#5D7A9C","#5E7A94")}">虚线框 = 街道/园区片区划分</span>`;
 }
 
 /* 企业下钻增强：能碳画像 + 实时数据 + 工艺流程图 + 能流图 + 可调节能力 */
@@ -133,10 +133,10 @@ function coModal(id){
      <path class="edge flow" d="M196 54 V 66"/><path class="edge flow" d="M196 100 V 112"/>
      <path class="edge flow" d="M242 79 H 300"/><path class="edge flow" d="M242 129 H 300"/>
     </svg>
-    <div class="hint">点击工序节点可联动该工序能耗与碳排数据（演示评分点①：工艺流程图）</div></div>
+    <div class="hint">点击工序节点可联动该工序能耗与碳排数据</div></div>
    <div><div class="sub2">${c.name} · 企业能流图（电 / 热 / 气 / 绿电氢）</div>
     ${entMiniSankey(c.id)}
-    <div class="hint">${c.name}四类能源接入路径实时展示，流带宽度对应该企业能源购入结构（演示评分点①：企业能流图）</div></div>
+    <div class="hint">${c.name}四类能源接入路径实时展示，流带宽度对应该企业能源购入结构</div></div>
   </div>`);
 }
 
@@ -148,10 +148,10 @@ function coModal(id){
   {ic:"🏢",t:"园区概况",d:"规划面积 12.6km² · 入驻企业 86 家",h:()=>showModal("园区概况专题分析",`<table>${row("规划面积","12.6 km²","四至范围东至黄河大道")}${row("入驻企业","86 家","规上企业 32 家")}${row("主导产业","新材料/装备制造/电子信息","产值占比 71%")}${row("年度工业产值","168 亿元","同比增长 5.2%")}</table><div class="concl"><b>专题结论：</b>园区产业结构持续优化，单位产值能耗连续三年下降，绿色低碳发展指数位居自治区园区前 3。</div>`)},
   {ic:"⚡",t:"供应",d:"电力 9.4亿kWh · 热力 28万GJ",h:()=>showModal("能源供应专题分析",`<table>${row("电网最大供电能力","220 MW","实际最大负荷 186 MW")}${row("燃气年供应","620 万m³","门站压力 1.6MPa")}${row("集中供热","28 万GJ","覆盖 92% 工业企业")}${row("制氢示范站","120 t/年","绿电电解水")}</table><div class="concl"><b>专题结论：</b>供电裕度 15.4%，晚峰时段储能放电覆盖 62%；建议扩容光伏园区至 150MW 以提升绿电自给率。</div>`)},
   {ic:"🔥",t:"消费",d:"综合能耗 18.6万tce · 同比 -4.6%",h:()=>showModal("能源消费专题分析",`<table>${row("电力消费","7.3 亿kWh","占比 48%")}${row("燃气消费","620 万m³","占比 22%")}${row("热力消费","28 万GJ","占比 18%")}${row("油品及其他","1.5 万tce","占比 12%")}</table><div class="concl"><b>专题结论：</b>电气化率提升至 48%，油品消费向物流运输集中；AI 用能策略已推送 8 家企业，预计年节能 2,300 tce。</div>`)},
-  {ic:"☁️",t:"碳排放",d:"42.3万tCO₂ · 强度 -8.0%",h:()=>showModal("碳排放专题分析",`<table>${row("范围一 直接排放","16.9 万t","占比 40%")}${row("范围二 间接排放","25.4 万t","占比 60%")}${row("碳排强度","2.53 tCO₂/tce","目标 2.40")}${row("较基准年累计","-17.4%","已达峰回落")}</table><div class="concl"><b>专题结论：</b>园区已进入碳排总量与强度双降通道；范围二占比偏高，扩大绿电直供是下一步降碳核心抓手。</div>`)},
-  {ic:"♨️",t:"余能",d:"余热余压利用率 71.2%",h:()=>showModal("余能利用专题分析",`<table>${row("余热余冷余压利用率","71.2%","目标 70% ✔")}${row("可回收余热资源","3.4 万GJ/年","已回收 2.42 万GJ")}${row("数据中心余热供暖","覆盖生活区 12 万m²","云谷数据服务")}${row("空压余热回收","4 家企业改造完成","年节电 320 万kWh")}</table><div class="concl"><b>专题结论：</b>未回收余热集中于精细化工精馏环节（约 0.98 万GJ/年），建议列入 2026 年重点工程（▲AI 诊断 #143 已识别）。</div>`)},
+  {ic:"☁️",t:"碳排放",d:"42.3万tCO₂ · 强度 -8.0%",h:()=>showModal("碳排放专题分析",`<table>${row("范围一 直接排放","16.9 万t","占比 40%")}${row("范围二 间接排放","25.4 万t","占比 60%")}${row("单位能耗碳排放","2.27 tCO₂/tce","年度目标 2.20")}${row("较基准年累计","-17.4%","已达峰回落")}</table><div class="concl"><b>专题结论：</b>园区已进入碳排总量与强度双降通道；范围二占比偏高，扩大绿电直供是下一步降碳核心抓手。</div>`)},
+  {ic:"♨️",t:"余能",d:"余热余压利用率 71.2%",h:()=>showModal("余能利用专题分析",`<table>${row("余热余冷余压利用率","71.2%","目标 70% ✔")}${row("可回收余热资源","3.4 万GJ/年","已回收 2.42 万GJ")}${row("数据中心余热供暖","覆盖生活区 12 万m²","智慧银川大数据中心")}${row("空压余热回收","4 家企业改造完成","年节电 320 万kWh")}</table><div class="concl"><b>专题结论：</b>未回收余热集中于化纤新材料精馏环节（约 0.98 万GJ/年），建议列入 2026 年重点工程（▲AI 诊断 #143 已识别）。</div>`)},
   {ic:"♻️",t:"循环",d:"固废 93.5% · 水重复 91.8%",h:()=>showModal("资源循环专题分析",`<table>${row("工业固废综合利用率","93.5%","目标 92% ✔")}${row("工业用水重复利用率","91.8%","目标 90% ✔")}${row("中水回用","180 万m³/年","市政绿化+工业冷却")}${row("一般固废协同处置","6.2 万t","水泥窑协同")}</table><div class="concl"><b>专题结论：</b>两项循环指标均已达标；建议推动固废分类计量接入平台，实现循环数据自动采集。</div>`)},
-  {ic:"🛠",t:"运营运维",d:"设备在线率 98.2% · 工单闭环 91%",h:()=>showModal("运营运维专题分析",`<table>${row("采集设备在线率","98.2%","334 台套")}${row("本月运维工单","28 单","闭环率 91%")}${row("月度远程巡检","8 次","季度现场巡检 2 次")}${row("故障响应","一般 4h / 紧急 2h","SLA 达标 100%")}</table><div class="concl"><b>专题结论：</b>运维体系按 SLA 稳定运行；高压监测终端 HV-008 离线 35 分钟已派单，预计 2h 内到场处理。</div>`)},
+  {ic:"🛠",t:"运营运维",d:"设备在线率 98.2% · 工单闭环 91%",h:()=>showModal("运营运维专题分析",`<table>${row("采集设备在线率","98.2%","333 台套")}${row("本月运维工单","28 单","闭环率 91%")}${row("月度远程巡检","8 次","季度现场巡检 2 次")}${row("故障响应","一般 4h / 紧急 2h","SLA 达标 100%")}</table><div class="concl"><b>专题结论：</b>运维体系按 SLA 稳定运行；高压监测终端 HV-008 离线 35 分钟已派单，预计 2h 内到场处理。</div>`)},
   {ic:"🏗",t:"重点项目",d:"在建 4 项 · 年减排 7.1万t",h:()=>showModal("重点项目专题分析",`<table><tr><th>工程</th><th>进度</th><th>碳评价</th></tr><tr><td>园区绿电直供工程</td><td>82%</td><td><span class="tag lv1">A</span></td></tr><tr><td>集中式光伏+储能二期</td><td>45%</td><td><span class="tag lv1">A</span></td></tr><tr><td>园区综合能源站</td><td>60%</td><td><span class="tag lv2">B</span></td></tr><tr><td>企业能碳采集全覆盖（本项目）</td><td>30%</td><td><span class="tag lv1">A</span></td></tr></table><div class="hint">点击「重点工程清单」中任意一行可查看工程详情弹窗（需求 #11）</div>`)},
  ];
  const ISO_BOX=(x,y,h,col,name,id)=>{const w=56,d=40,ox=x,oy=y;
@@ -212,24 +212,24 @@ function coModal(id){
   <div class="kpis fs-kpis" style="grid-template-columns:repeat(6,1fr)">
    ${kpi("综合能耗","18.6","万tce","同比下降 4.6%","down ok")}
    ${kpi("碳排放总量","42.3","万tCO₂","同比下降 6.2%","down ok")}
-   ${kpi("单位能耗碳排放","2.53","tCO₂/tce","同比下降 8.0%","down ok")}
+   ${kpi("单位能耗碳排放","2.27","tCO₂/tce","同比下降 1.7%","down ok")}
    ${kpi("清洁能源消费占比","28.4","%","同比 +1.9pct","up ok")}
    ${kpi("绿电消纳率","96.1","%","目标 95%","up ok")}
    ${kpi("重点工程碳绩效","86","分","环比 +2","up ok")}
   </div>
   <div class="fs-grid">
    <div class="fs-col">
-    <div class="card"><h3>核心指标区 · 考核指标达标进度 <span class="tag star">演示评分点①</span></h3>${CORE_STRIP}</div>
-    <div class="card"><h3>能碳结构 · 用能（上年度）</h3><div class="chart">${donut(Object.entries(PARK.energyMix).map(([k,v])=>({k,v,u:"%"})),150,24)}</div></div>
-    <div class="card"><h3>能碳结构 · 碳排（上年度）</h3><div class="chart">${donut(Object.entries(PARK.carbonMix).map(([k,v])=>({k,v,u:"%"})),150,24)}</div></div>
+    <div class="card"><h3>核心指标区 · 考核指标达标进度 </h3>${CORE_STRIP}</div>
+    <div class="card"><h3>能碳结构 · 用能（上年度）</h3><div class="chart">${donut([{k:"电力",v:8.9,u:" 万tce"},{k:"燃气",v:4.1,u:" 万tce"},{k:"热力",v:3.3,u:" 万tce"},{k:"油品",v:1.5,u:" 万tce"},{k:"煤品",v:0.8,u:" 万tce"}],150,24)}</div></div>
+    <div class="card"><h3>能碳结构 · 碳排（上年度）</h3><div class="chart">${donut([{k:"电力",v:22.0,u:" 万tCO₂"},{k:"燃气",v:8.0,u:" 万tCO₂"},{k:"热力",v:6.8,u:" 万tCO₂"},{k:"油品",v:3.8,u:" 万tCO₂"},{k:"煤品",v:1.7,u:" 万tCO₂"}],150,24)}</div></div>
     <div class="card fs-fill"><h3>双控目标完成情况（6 项考核指标）</h3>
      <div class="fs-fill-body"><table>${ASSESS.map(a=>row(a.name,a.actual+" / "+a.target+" "+a.unit,a.ok?"✔ 达标":"▲ 未达标")).join("")}</table></div>
      <div class="concl"><b>结论：</b>6 项指标 4 项达标，单位能耗碳排放、清洁能源消费占比两项待提升，已纳入 2026 年度重点攻坚清单。</div></div>
    </div>
    <div class="fs-col">
-    <div class="card"><h3>园区三维实景（产业布局 · 企业位置 · 能碳数据）<span class="tag star">演示评分点①</span></h3>
+    <div class="card"><h3>园区三维实景（产业布局 · 企业位置 · 能碳数据）</h3>
      ${ISO_CTRL}${ISO_SVG}<div id="isoToolbarSlot"></div></div>
-    <div class="card fs-fill"><h3>能流 / 碳流分析 <span class="tag star">演示评分点①</span></h3>
+    <div class="card fs-fill"><h3>能流 / 碳流分析 </h3>
      <div class="fs-fill-body">
      <div style="display:flex;gap:8px;margin-bottom:8px;align-items:center">
       <button class="btn sm on" data-flowbtn="en" onclick="flowMode('en')">能流图</button>
@@ -239,10 +239,10 @@ function coModal(id){
      <div id="flowBox">${flowSvg("en")}</div></div></div>
    </div>
    <div class="fs-col">
-    <div class="card"><h3>电力结构（年度）</h3><div class="chart">${donut(Object.entries(PARK.powerMix).map(([k,v])=>({k,v,u:"%"})),150,24)}</div></div>
-    <div class="card"><h3>能耗趋势（近五年）</h3><div class="chart">${comboBarLine(YEARS,"总能耗(万tce)",PARK.energy,"能耗强度",PARK.energyInt,172,300,"万tce")}</div>
+    <div class="card"><h3>电力结构（上年度 · 用电量）</h3><div class="chart">${donut([{k:"传统电力",v:3.36,u:" 亿kWh"},{k:"外购绿电",v:1.61,u:" 亿kWh"},{k:"分布式光伏",v:1.31,u:" 亿kWh"},{k:"集中式新能源",v:1.02,u:" 亿kWh"}],150,24)}</div></div>
+    <div class="card"><h3>能耗趋势（近五年）</h3><div class="chart">${comboBarLine(YEARS,"总能耗(万tce)",PARK.energy,"能耗强度(tce/万元)",PARK.energyInt,172,300,"万tce")}</div>
      <div class="concl"><b>结论：</b>总能耗连续 4 年下降，能耗强度累计下降 21.8%。</div></div>
-    <div class="card"><h3>碳排趋势（近五年）</h3><div class="chart">${comboBarLine(YEARS,"碳排放(万tCO₂)",PARK.carbon,"碳排强度",PARK.carbonInt,172,300,"万t")}</div>
+    <div class="card"><h3>碳排趋势（近五年）</h3><div class="chart">${comboBarLine(YEARS,"碳排放(万tCO₂)",PARK.carbon,"碳排强度(t/万元)",PARK.carbonInt,172,300,"万t")}</div>
      <div class="concl"><b>结论：</b>碳排强度降幅 24.2% 大于总量降幅 17.4%，进入总量与强度双降阶段。</div></div>
     <div class="card fs-fill"><h3>重点企业碳排 TOP8 · 能效对标</h3>
      <div class="fs-fill-body"><table>${COMPANIES.slice().sort((a,b)=>b.co-a.co).map(c=>row(c.name,c.co.toFixed(1)+" 万tCO₂",c.eg+" 级能效 · 累计 -"+c.red+"%")).join("")}</table></div>
@@ -254,17 +254,17 @@ function coModal(id){
     <div class="chart">${stackedBar(["1月","2月","3月","4月","5月","6月","7月","8月","9月","10月","11月","12月"],Object.entries(PARK.monthPower).map(([k,v],i)=>({name:k,color:PALETTE[i%8],data:v})),210,660)}</div></div>
    <div class="card"><h3>重点工程清单</h3>
     <table><tr><th>工程名称</th><th>建设主体</th><th>投资(万元)</th><th>进度</th><th>碳评价</th></tr>
-    <tr onclick="projModal(1)" style="cursor:pointer"><td>园区绿电直供工程</td><td>绿洲光伏电力</td><td>12,400</td><td>82%</td><td><span class="tag lv1">A</span></td></tr>
-    <tr onclick="projModal(2)" style="cursor:pointer"><td>集中式光伏+储能二期</td><td>绿洲光伏电力</td><td>45,000</td><td>45%</td><td><span class="tag lv1">A</span></td></tr>
+    <tr onclick="projModal(1)" style="cursor:pointer"><td>园区绿电直供工程</td><td>宝丰储能科技</td><td>12,400</td><td>82%</td><td><span class="tag lv1">A</span></td></tr>
+    <tr onclick="projModal(2)" style="cursor:pointer"><td>集中式光伏+储能二期</td><td>宝丰储能科技</td><td>45,000</td><td>45%</td><td><span class="tag lv1">A</span></td></tr>
     <tr onclick="projModal(3)" style="cursor:pointer"><td>园区综合能源站</td><td>管委会经发部</td><td>8,600</td><td>60%</td><td><span class="tag lv2">B</span></td></tr>
     <tr onclick="projModal(4)" style="cursor:pointer"><td>企业能碳采集全覆盖（本项目）</td><td>中标方+8家企业</td><td>600</td><td>30%</td><td><span class="tag lv1">A</span></td></tr>
     <tr><td>全钒液流长时储能示范</td><td>云碳共享储能</td><td>6,800</td><td>55%</td><td><span class="tag lv1">A</span></td></tr>
-    <tr><td>数据中心余热回收供暖</td><td>云谷数据服务</td><td>3,200</td><td>70%</td><td><span class="tag lv2">B</span></td></tr>
-    <tr><td>虚拟电厂聚合调控平台</td><td>电通物联科技</td><td>1,900</td><td>40%</td><td><span class="tag lv1">A</span></td></tr>
+    <tr><td>数据中心余热回收供暖</td><td>智慧银川大数据中心</td><td>3,200</td><td>70%</td><td><span class="tag lv2">B</span></td></tr>
+    <tr><td>虚拟电厂聚合调控平台</td><td>嘉盛德电子材料</td><td>1,900</td><td>40%</td><td><span class="tag lv1">A</span></td></tr>
     </table>
     <div class="concl"><b>工程概览：</b>在建重点工程 7 项，总投资 7.85 亿元，全部建成后预计年减排 8.6 万 tCO₂；点击表格行可查看工程详情弹窗。</div></div>
   </div>
-  <div class="card" style="margin-top:12px"><h3>信息概览区（点击卡片打开专题分析）<span class="tag star">演示评分点①</span></h3>
+  <div class="card" style="margin-top:12px"><h3>信息概览区（点击卡片打开专题分析）</h3>
    <div class="grid g4">${INFOS.map((f,i)=>`<div class="info-card" onclick="INFOS[${i}].h()"><span class="ic">${f.ic}</span><div class="t">${f.t}</div><div class="d">${f.d}</div></div>`).join("")}</div></div>`;
  window.INFOS=INFOS;
 })();
@@ -280,9 +280,9 @@ reg("oneMap",()=>`
  <div class="card"><h3>清洁能源要素</h3><span class="req-badge">#18</span>
   <table>${row("分布式光伏","86 个 / 42MW","在运")}${row("储能","3 站 / 60MWh","在运")}${row("充电桩","126 个","快充 48")}${row("绿电交易","2.1 亿kWh","本年")}</table></div>
  <div class="card"><h3>绿色低碳成就</h3><span class="req-badge">#19</span>
-  <table>${row("国家级绿色园区","1 个","2024 年获批")}${row("省级绿色工厂","3 家","银北/云谷/绿洲")}${row("零碳工厂试点","2 家","电通/云谷")}${row("国家级绿色工厂","1 家","申报中")}</table></div>
+  <table>${row("国家级绿色园区","1 个","2024 年获批")}${row("省级绿色工厂","3 家","宏基/智慧银川/宝丰")}${row("零碳工厂试点","2 家","嘉盛德/智慧银川")}${row("国家级绿色工厂","1 家","申报中")}</table></div>
 </div>
-<div class="card"><h3>瓦片地图 · 按街道/园区维度划分企业（要素联动）<span class="tag star">演示评分点②</span></h3><span class="req-badge">#20 #21 #22 #23</span>
+<div class="card"><h3>瓦片地图 · 按街道/园区维度划分企业（要素联动）</h3><span class="req-badge">#20 #21 #22 #23</span>
  <div style="display:flex;gap:10px;margin-bottom:10px;flex-wrap:wrap;align-items:center">
   <select id="omFactor" onchange="omRefresh()">
    <option value="en">能源消费</option><option value="co">碳排放</option><option value="cl">清洁能源</option><option value="gl">绿色低碳成就</option>
@@ -317,7 +317,7 @@ function omRefresh(){
  if(kpiT)kpiT.innerHTML=
   row("综合能耗量 · "+per,(PARK.energy[idx]*pf).toFixed(2),"万tce")+
   row("碳排放总量 · "+per,(PARK.carbon[idx]*pf).toFixed(2),"万tCO₂")+
-  row("单位能耗碳排放 · "+per,(PARK.carbonInt[idx]||2.53).toFixed(2),"tCO₂/tce")+
+  row("单位能耗碳排放 · "+per,(PARK.carbon[idx]/PARK.energy[idx]).toFixed(2),"tCO₂/tce")+
   row("消纳率 · "+per,"96.1","%");
  const key=OM.factor==="co"?"co5":OM.factor==="en"?"en5":null;
  let list=COMPANIES.filter(c=>OM.dist==="all"||c.dist===OM.dist);
@@ -492,18 +492,18 @@ function m1Update(){
 ④ 后续关注：热力占比稳中有升，蒸汽管网保温与熔盐储热移峰填谷是下阶段结构优化重点；油品退出节奏可结合危化品企业工艺电气化进一步加快。`;
  }else if(m1Dim.startsWith("产业")){
   document.getElementById("m1t").textContent=`产业维度${nm}趋势`;
-  const inds=["新材料","装备制造","食品加工","数据服务","其他"];
+  const inds=["新材料","装备制造","冷链装备","数据服务","其他"];
   chart.innerHTML=stackedBar(d.labels,inds.map((n,i)=>({name:n,color:PALETTE[i%8],data:d.ind[m1Metric].map(v=>+(v*(1-i*0.08)).toFixed(2))})),250,560)+
    lineChart(d.labels,[{name:"产业${nm}变化率(%)".replace("${nm}",nm),color:"#FBBF24",data:d.labels.map((_,i)=>i?+(((metricData[i]-metricData[i-1])/metricData[i-1])*100).toFixed(1):0)}],160,560);
   document.getElementById("m1c").innerHTML=`<b>趋势结论（产业维度）：</b>
 ① 新材料、数据服务两大产业${nm}双降且降幅扩大，合计贡献园区降幅的 60% 以上，是园区「双降」的主引擎；
-② 食品加工产业受产能恢复影响，本期降幅收窄至 4.2%，需防范产量反弹带动能耗回升；
-③ 产业间能耗强度梯度明显：数据服务最低、食品加工最高（约 2.3 倍差距），产业结构性优化空间仍存；
+② 冷链装备产业受产能恢复影响，本期降幅收窄至 4.2%，需防范产量反弹带动能耗回升；
+③ 产业间能耗强度梯度明显：数据服务最低、冷链装备最高（约 2.3 倍差距），产业结构性优化空间仍存；
 ④ 结合碳排结构饼图，各产业碳排差异主要来自外购电力占比与工艺燃料结构，新材料产业工艺过程排放占比偏高，是下阶段电气化改造重点。`;
   document.getElementById("m1c2").innerHTML=`<b>原因分析：</b>
 ① 新材料产业降幅最大：10℃ 低温余热浓缩装置投产叠加空压站 AI 智控改造，单元产品综合能耗下降 9.6%；
 ② 数据服务产业受液冷改造与绿电聚合采购双重驱动，PUE 降至 1.31、绿电占比 35%，碳排降幅大于能耗降幅；
-③ 食品加工产业当前以管理节能为主、技改项目尚在建设期，建议将分布式光伏建设与园区共享储能接入提前至下一年度一季度，并对冷库系统实施变频 + 水蓄冷改造；
+③ 冷链装备产业当前以管理节能为主、技改项目尚在建设期，建议将分布式光伏建设与园区共享储能接入提前至下一年度一季度，并对冷库系统实施变频 + 水蓄冷改造；
 ④ 产业口径与园区统计口径一致（片区归属字段统一版本管理），本结论可直接用于产业考核与年度研判材料。`;
  }else{
   document.getElementById("m1t").textContent=`企业维度${nm}排序趋势`;
@@ -516,7 +516,7 @@ function m1Update(){
 ④ 能效 A 级企业占比由 25% 提升至 50%，C 级企业全部进入改造清单，梯队结构持续改善。`;
   document.getElementById("m1c2").innerHTML=`<b>原因分析：</b>
 ① 头部企业节能改造陆续投运（低温余热浓缩、液冷改造、空压站 AI 智控等先进技术），叠加绿电采购占比提升，双轮驱动降幅扩大；
-② 尾部企业（如黄河生物医药）技改项目仍在实施期、计量基础薄弱，短期降幅有限；
+② 尾部企业（如海归小镇生物医药园）技改项目仍在实施期、计量基础薄弱，短期降幅有限；
 ③ 措施建议：将尾部企业纳入 AI 节能诊断重点对象，诊断结果（节能潜力、整改建议、预期收益）推送企业并纳入园区减排措施跟踪；对连续两期无改善企业启动帮扶指导与考核约谈，形成「监测—诊断—整改—考核」闭环。`;
  }}
 RENDERERS.m2=()=>`
@@ -544,7 +544,7 @@ function m2Update(){
   ${rows.map(r=>`<tr><td>${r.k}</td><td style="color:${lc("#fff","#0B4E8F")};font-family:Consolas">${r.v}</td>
    <td style="${m2ViewKey==="pct"?'color:'+lc("#7DD3FC","#0B6EC5")+';font-weight:700':""}">${(r.v/total*100).toFixed(1)}%</td>
    <td class="${r.yoy<0?"down":"bad"}" style="${m2ViewKey==="yoy"?"font-weight:700":""}">${r.yoy>0?"+":""}${r.yoy}%</td></tr>`).join("")}</table>
-  <div class="concl"><b>分析：</b>${t==="en"?"煤品压减与热力优化贡献主要能耗降幅；":"油品碳排逆势上升，集中于精细化工运输环节，建议纳入下年度告警阈值管理。"}</div>`;
+  <div class="concl"><b>分析：</b>${t==="en"?"煤品压减与热力优化贡献主要能耗降幅；":"油品碳排逆势上升，集中于化纤新材料运输环节，建议纳入下年度告警阈值管理。"}</div>`;
  const ch=document.getElementById("m2Chart");
  if(m2ViewKey==="pct")ch.innerHTML=donut(rows.map(r=>({k:r.k,v:r.v,u:" "+mu})),180,24);
  else if(m2ViewKey==="yoy")ch.innerHTML=hBar(rows.map(r=>({k:r.k,v:r.yoy})),200,520," %",r=>r.v<0?"#4ADE80":"#F87171");
@@ -558,7 +558,7 @@ RENDERERS.m4=()=>`
   <div id="m4Chart"></div>
   <div><div class="sub2">碳资产 / 减碳量排序 <span class="req-badge" style="position:static">#39 #40</span></div>
    <div class="chart">${hBar(COMPANIES.map(c=>({k:c.name,v:c.asset})).sort((a,b)=>b.v-a.v),150,560," 万元",(it,i)=>"#2DD4BF")}</div>
-   <div class="concl"><b>结论分析：</b>减碳量按同产品类别对标排序，新材料与数据服务企业减碳强度领先；黄河生物医药减碳率仅 10%，建议列入重点帮扶清单。</div></div>
+   <div class="concl"><b>结论分析：</b>减碳量按同产品类别对标排序，新材料与数据服务企业减碳强度领先；海归小镇生物医药园减碳率仅 10%，建议列入重点帮扶清单。</div></div>
  </div>`;
 function m4Update(k){
  const box=document.getElementById("m4Chart");if(!box)return;
@@ -609,13 +609,13 @@ reg("report",()=>`
    <button class="btn" onclick="rptDownload('word')">生成 Word</button>
   </div>
  </div>
- <div class="hint" style="margin-bottom:10px">报告时间戳：<span id="rptTsShow" style="color:#7DD3FC"></span>　｜　时间戳支持 <b>年度 / 季度 / 月度 / 小时</b> 四种粒度独立选择，联动年份、季度、月份、日期与小时，组合成完整报告时点；报告周期（年/季/月）与时间戳粒度互不影响，可创建并下载 PDF 或 Word 报告（演示评分点④）</div>
+ <div class="hint" style="margin-bottom:10px">报告时间戳：<span id="rptTsShow" style="color:#7DD3FC"></span>　｜　时间戳支持 <b>年度 / 季度 / 月度 / 小时</b> 四种粒度独立选择，联动年份、季度、月份、日期与小时，组合成完整报告时点；报告周期（年/季/月）与时间戳粒度互不影响，可创建并下载 PDF 或 Word 报告</div>
  <div class="kpis" style="grid-template-columns:repeat(7,1fr)" id="rptKpi"></div>
  <div class="grid g2">
   <div><div class="sub2">碳排放趋势分析 · 环比（#60）</div><div id="rptTrend"></div></div>
   <div><div class="sub2">核算范围分析（#61）</div>${donut([{k:"范围一：燃料燃烧",v:11.2},{k:"范围一：工艺排放",v:5.7},{k:"范围二：外购电力",v:18.6},{k:"范围二：外购热力",v:6.8}],160,24)}</div>
   <div><div class="sub2">能碳结构 · 能源类型统计（#62）</div>${donut(Object.entries(PARK.carbonMix).map(([k,v])=>({k,v,u:"%"})),160,24)}</div>
-  <div><div class="sub2">行业碳排放排序（#63）</div>${hBar([{k:"新材料",v:10.6},{k:"装备制造",v:8.2},{k:"精细化工",v:8.1},{k:"数据服务",v:7.0},{k:"食品加工",v:5.4},{k:"其他",v:3.0}],170,560," 万tCO₂",(it,i)=>PALETTE[i%8])}</div>
+  <div><div class="sub2">行业碳排放排序（#63）</div>${hBar([{k:"新材料",v:10.6},{k:"装备制造",v:8.2},{k:"化纤新材料",v:8.1},{k:"数据服务",v:7.0},{k:"冷链装备",v:5.4},{k:"其他",v:3.0}],170,560," 万tCO₂",(it,i)=>PALETTE[i%8])}</div>
   <div><div class="sub2">碳达峰推演（#64）</div>
    <table><tr><th>情景</th><th>达峰时间</th><th>达峰值(万tCO₂)</th></tr>
    <tr><td>低碳情景</td><td>2027 年</td><td>42.3</td></tr>
@@ -627,11 +627,11 @@ reg("report",()=>`
  </div>
  <div class="card" style="background:rgba(0,91,172,.08);margin-top:14px"><h3>结论与建议（▲#66 · 基于分析自动生成）</h3>
   <p style="line-height:2;font-size:13px"><b style="color:#4ADE80">主要成效：</b>碳排放总量同比下降 6.2%，能耗强度累计下降 21.8%，绿电消纳率 96.1% 达标，6 项考核指标中 4 项达标。</p>
-  <p style="line-height:2;font-size:13px"><b style="color:#FBBF24">存在问题与风险：</b>①单位能耗碳排放 2.53 tCO₂/tce 未达 2.40 目标；②精细化工油品碳排同比上升 1.2%；③黄河生物医药碳配额存在盈缺风险，触发超排放预警。</p>
-  <p style="line-height:2;font-size:13px"><b style="color:#38BDF8">重点工作建议：</b>①将兴庆精细化工精馏改造列入 2026 重点工程；②扩大绿电直供覆盖企业至 12 家；③对 2 家配额缺口企业提前启动 CCER 购置预案；④食品加工产业纳入告警阈值动态管理。</p>
+  <p style="line-height:2;font-size:13px"><b style="color:#FBBF24">存在问题与风险：</b>①单位能耗碳排放 2.27 tCO₂/tce 未达 2.20 年度目标；②化纤新材料油品碳排同比上升 1.2%；③海归小镇生物医药园碳配额存在盈缺风险，触发超排放预警。</p>
+  <p style="line-height:2;font-size:13px"><b style="color:#38BDF8">重点工作建议：</b>①将莱卡纤维新材料精馏改造列入 2026 重点工程；②扩大绿电直供覆盖企业至 12 家；③对 2 家配额缺口企业提前启动 CCER 购置预案；④冷链装备产业纳入告警阈值动态管理。</p>
  </div>
 </div>
-${pageHint("本页覆盖需求 #59–#66。▲#65 能碳告警、▲#66 结论与建议为重要参数。演示评分点④：年/季/月 + 时间戳四粒度选择 + 按《核算方法与报告指南（试行）》模板生成 PDF / Word 报告（封面、企业基本情况、温室气体排放、活动水平数据、排放因子数据、真实性声明、附表 1–3，按钮为真实下载）。")}`);
+${pageHint("本页覆盖需求 #59–#66。▲#65 能碳告警、▲#66 结论与建议为重要参数。：年/季/月 + 时间戳四粒度选择 + 按《核算方法与报告指南（试行）》模板生成 PDF / Word 报告（封面、企业基本情况、温室气体排放、活动水平数据、排放因子数据、真实性声明、附表 1–3，按钮为真实下载）。")}`);
 function rptSwitch(k){rptKey=k;renderReport();}
 function renderReport(){
  const r=REPORTS[rptKey];const box=document.getElementById("rptKpi");if(!box)return;
@@ -756,16 +756,16 @@ const AI_SESS=[
  {t:"当前对话",sub:"实时交互",msgs:[]},
  {t:"11-09 绿电交易咨询",sub:"历史会话 1 · 4 轮",msgs:[
   {r:"u",x:"11 月绿电交易电量多少？"},
-  {r:"a",x:"▶ 能碳问数\n11 月绿电交易 0.21 亿 kWh，占园区用电 14.3%。主力卖方为绿洲光伏电力（120MW 集中式），均价 0.386 元/kWh，较燃煤基准价低 3.2%。\n（可继续追问：交易金额、结算安排）"},
+  {r:"a",x:"▶ 能碳问数\n11 月绿电交易 0.21 亿 kWh，占园区用电 14.3%。主力卖方为宝丰储能科技（120MW 集中式），均价 0.386 元/kWh，较燃煤基准价低 3.2%。"},
   {r:"u",x:"追问：交易金额和结算月份？"},
   {r:"a",x:"▶ 多轮追问 · 带上下文计算\n按 11 月成交量与成交均价测算：交易金额约 803 万元。\n结算安排：11 月结算电量 0.13 亿 kWh（已于 11 月 25 日完成），剩余 0.08 亿 kWh 随 12 月月度结算，绿证同步划转、区块链存证可溯。"},
   {r:"u",x:"追问：和燃煤电价相比节省了多少成本？"},
-  {r:"a",x:"▶ 多轮追问 · 对比分析\n燃煤基准价 0.399 元/kWh，绿电均价低 0.013 元/kWh：\n· 11 月节省购电成本约 27 万元；按全年绿电 2.6 亿 kWh 测算年节省约 338 万元\n· 叠加绿证收益（约 0.02 元/kWh），绿电综合成本优势扩大到 5.1%\n（可继续追问：明年怎么扩大绿电交易）"},
+  {r:"a",x:"▶ 多轮追问 · 对比分析\n燃煤基准价 0.399 元/kWh，绿电均价低 0.013 元/kWh：\n· 11 月节省购电成本约 27 万元；按全年绿电 2.6 亿 kWh 测算年节省约 338 万元\n· 叠加绿证收益（约 0.02 元/kWh），绿电综合成本优势扩大到 5.1%"},
   {r:"u",x:"追问：2026 年绿电交易怎么扩大？"},
-  {r:"a",x:"▶ 多轮追问 · 规划建议\n2026 年扩大路径：\n1. 绿洲光伏二期 60MW 投运，年新增绿电 0.9 亿 kWh\n2. 新签宁夏域内绿电直供协议 2 家，交易量目标 0.35 亿 kWh（同比 +66%）\n3. 建议园区预留 20% 电量参与绿电撮合交易，博取峰谷价差收益"}]},
+  {r:"a",x:"▶ 多轮追问 · 规划建议\n2026 年扩大路径：\n1. 宝丰储能二期光伏 60MW 投运，年新增绿电 0.9 亿 kWh\n2. 新签宁夏域内绿电直供协议 2 家，交易量目标 0.35 亿 kWh（同比 +66%）\n3. 建议园区预留 20% 电量参与绿电撮合交易，博取峰谷价差收益"}]},
  {t:"11-08 配额预警处理",sub:"历史会话 2 · 3 轮",msgs:[
-  {r:"u",x:"黄河生物医药配额预警怎么处理？"},
-  {r:"a",x:"▶ 智能诊断\n该企业 2025 配额缺口 320 t，系统已给出三条处置路径：\n1. 购买 CCER 500 t（当前价 102.4 元/t，约 5.1 万元）\n2. 空压机优化减排量核证（580 t，预计 12 月完成）\n3. 绿证抵消（需核销 10,200 张）\n已推送至企业端碳资产管理模块。\n（可继续追问：CCER 价格走势、抵消后能否达标）"},
+  {r:"u",x:"海归小镇生物医药园配额预警怎么处理？"},
+  {r:"a",x:"▶ 智能诊断\n该企业 2025 配额缺口 320 t，系统已给出三条处置路径：\n1. 购买 CCER 500 t（当前价 102.4 元/t，约 5.1 万元）\n2. 空压机优化减排量核证（580 t，预计 12 月完成）\n3. 绿证抵消（需核销 10,200 张）\n已推送至企业端碳资产管理模块。"},
   {r:"u",x:"追问：CCER 价格走势如何？"},
   {r:"a",x:"▶ 多轮追问 · 行情分析\nCCER 近三月走势：95.2 → 98.6 → 102.4 元/t，四季度累计上涨 8.3%。\n驱动因素：2026 年配额收紧预期 + 金融机构入场。\n预测区间：明年 110–125 元/t。建议在 12 月前锁定 500 t，可节省约 4,000–11,000 元。"},
   {r:"u",x:"追问：抵消后能否达标？"},
@@ -777,9 +777,9 @@ reg("aiAgent",()=>`
   <h3>会话管理</h3><span class="req-badge">#141 多轮对话·历史查看</span>
   <div class="ai-side" id="aiSess">${AI_SESS.map((s,i)=>`<div class="ai-sess ${i===AI_CUR?"on":""}" onclick="aiSwitch(${i})">${s.t}<div class="sub">${s.sub} · ${s.msgs.length} 条消息</div></div>`).join("")}</div>
   <button class="btn ghost sm" style="margin-top:10px;width:100%" onclick="aiNew()">＋ 新建对话</button>
-  <div class="hint">支持多轮对话与历史对话查看（演示评分点⑤）；点击历史会话可回看完整记录</div>
+  <div class="hint">支持多轮对话与历史对话查看；点击历史会话可回看完整记录</div>
  </div>
- <div class="card" style="margin-bottom:0"><h3>AI 智能问答 <span class="tag lv3">▲需源代码</span></h3><span class="req-badge">#140–143</span>
+ <div class="card" style="margin-bottom:0"><h3>AI 智能问答 </h3><span class="req-badge">#140–143</span>
   <div class="chat">
    <div class="chat-list" id="chatList"></div>
    <div class="chips" id="qaChips">${aiChips()}</div>
@@ -788,7 +788,7 @@ reg("aiAgent",()=>`
     <button class="btn" onclick="askFree()">发送</button>
     <input type="file" id="aiFile" accept="image/*" style="display:none" onchange="aiAttach(this)">
     <button class="btn ghost" title="上传图片附件" onclick="document.getElementById('aiFile').click()">📎 附件</button>
-    <button class="btn ghost mic-btn" id="micBtn" title="语音唤醒：说「小苏小苏」唤醒智能体（演示评分点⑤）" onclick="aiVoice()">🎤 语音唤醒</button>
+    <button class="btn ghost mic-btn" id="micBtn" title="语音唤醒：说「小苏小苏」唤醒智能体" onclick="aiVoice()">🎤 语音唤醒</button>
    </div>
    <div class="voice-status" id="voiceStatus">待唤醒 · 唤醒词：<b>「小苏小苏」</b>（点击 🎤 开始聆听，唤醒后语音提问，回答自动播报）</div>
   </div></div>
@@ -796,7 +796,7 @@ reg("aiAgent",()=>`
   <div class="card"><h3>智能体平台能力（#140）</h3><span class="req-badge">#140</span>
    <table>${row("专用大模型","零碳园区垂直领域","统一下发")}${row("专业智能体","问数/预测/诊断/规划","4 类")}${row("场景数据集","园区 5 年能碳数据","脱敏")}${row("算法/技能组件","预测·诊断·优化","可插拔")}${row("AI 评测体系","准确率/幻觉率","季度评测")}</table></div>
   <div class="card"><h3>▲ 重要参数提示</h3>
-   <div class="concl"><b class="red">▲#142 AI智能预测：</b>融合历史与实时数据，预测能耗、碳排放、负荷及新能源出力——需系统截图佐证。</div>
+   <div class="concl"><b class="red">▲#142 AI智能预测：</b>融合历史与实时数据，预测能耗、碳排放、负荷及新能源出力。</div>
    <div class="concl"><b class="red">▲#143 AI节能诊断：</b>实时分析能耗数据，定位高耗能环节，输出节能潜力、整改建议及预期收益。</div>
    <div class="hint">#141–#143 均需提供源代码</div></div>
  </div>
@@ -815,7 +815,7 @@ function aiNew(){AI_SESS.unshift({t:"新对话 "+(AI_SESS.length+1),sub:"实时�
 const AI_CHARTS=[
  ()=>lineChart(YEARS.map(String),[{name:"碳排(万t)",color:"#2DD4BF",data:PARK.carbon}],150,460),
  null,
- ()=>hBar([{k:"兴庆精细化工",v:310},{k:"贺兰装备制造",v:280},{k:"塞上食品加工",v:190}],150,460," tce",(it,i)=>["#F87171","#FBBF24","#38BDF8"][i]),
+ ()=>hBar([{k:"莱卡纤维新材料",v:310},{k:"宇超电力装备",v:280},{k:"鲜控冷链设备",v:190}],150,460," tce",(it,i)=>["#F87171","#FBBF24","#38BDF8"][i]),
  ()=>lineChart(["6月","7月","8月","9月","10月","11月","12月(预测)"],[{name:"园区负荷(MW)",color:"#38BDF8",data:[150,158,164,171,166,162,172]},{name:"光伏出力(MW)",color:"#4ADE80",data:[88,92,96,94,85,78,70]}],150,460)];
 /* 动态追问 chips：根据当前会话最后一轮回答给出「可追问」下一跳，另列「新话题」根问题 */
 function aiChips(){
@@ -840,7 +840,7 @@ function askFree(){const inp=document.getElementById("chatInput");if(!inp)return
  list.innerHTML+=aiMsgHTML({r:"u",x:q,img:ATTACH_URL});
  const wasAttach=!!ATTACH_URL;ATTACH_URL=null;
  setTimeout(()=>{let m;
-  if(wasAttach)m={r:"a",x:"▶ 附件解析完成\n已识别图片中的设备铭牌：型号 LC-033（低压用电监测终端），额定电流 100A。\n已自动关联该设备能效档案：本月电能损耗率 1.8%，状态正常；建议保持季度巡检节奏。\n（对应需求 #141：支持上传图片等附件）"};
+  if(wasAttach)m={r:"a",x:"▶ 附件解析完成\n已识别图片中的设备铭牌：型号 LC-033（低压用电监测终端），额定电流 100A。\n已自动关联该设备能效档案：本月电能损耗率 1.8%，状态正常；建议保持季度巡检节奏。"};
   else{const hit=AI_QA.find(x=>q.includes("碳")&&x.q.includes("碳排")||q.includes("预测")||q.includes("节能")||q.includes("规划"));
    m=hit?{r:"a",x:hit.a,nid:hit.id}:{r:"a",x:"已在园区知识库检索，为您匹配到相关政策与口径说明。\n演示环境建议点击上方「预置问题」体验完整多轮对话链：能碳问数 → 追问归因 → 范围二治理 → 零碳推演 → 趋势预测 → 节能诊断 → 整改方案。"};}
   s.msgs.push(m);list.innerHTML+=aiMsgHTML(m);list.scrollTop=list.scrollHeight;aiChipsRefresh();},650);}

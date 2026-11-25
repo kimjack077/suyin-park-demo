@@ -1,16 +1,16 @@
 /* ---------- 碳排放核算与核查 #101–125 ---------- */
 reg("entCarbon",()=>`
 <div class="tabs">
- <div class="tab on" data-t="c1">碳排放核算 ▲</div>
+ <div class="tab on" data-t="c1">碳排放核算</div>
  <div class="tab" data-t="c2">产品碳足迹</div>
  <div class="tab" data-t="c3">供应链碳数据</div>
- <div class="tab" data-t="c4">碳核查支撑 ▲</div>
+ <div class="tab" data-t="c4">碳核查支撑</div>
 </div>
 <div class="card"><div id="tabBody"></div></div>
 ${pageHint("本页覆盖需求 #101–#125。▲#105 碳排放总量计算、▲#122 核算过程数据追踪溯源（区块链或可交叉验证方式保证不可篡改、准确可信）为重要参数。")}`);
 RENDERERS.c1=()=>`
 <div class="kpis" style="grid-template-columns:repeat(5,1fr)">
- ${kpi("碳排放总量","16,120","tCO₂","▲#105 核算完成")}
+ ${kpi("碳排放总量","22,590","tCO₂","▲#105 核算完成")}
  ${kpi("单位产品碳排放","0.42","tCO₂/百件","-3.8%")}
  ${kpi("单位产值碳排放","0.116","tCO₂/万元","-4.2%","down ok")}
  ${kpi("单位增加值碳排放","0.208","tCO₂/万元","-4.6%","down ok")}
@@ -19,13 +19,16 @@ RENDERERS.c1=()=>`
 <div class="grid g2">
  <div><div class="sub2">排放源清单（核算周期+边界内全部排放源）<span class="req-badge" style="position:static">#109</span></div>
   <table><tr><th>排放源</th><th>类别</th><th>活动数据</th><th>排放因子</th><th>CO₂(t)</th></tr>
-  <tr><td>外购电力</td><td>范围二</td><td>22,610 MWh</td><td>0.5366</td><td>12,132</td></tr>
+  <tr><td>外购电力</td><td>范围二</td><td>31,650 MWh</td><td>0.5366</td><td>16,983</td></tr>
   <tr><td>天然气锅炉</td><td>范围一</td><td>211 万m³</td><td>2.162 kg/m³</td><td>4,562</td></tr>
   <tr><td>外购蒸汽</td><td>范围二</td><td>26,800 GJ</td><td>0.11 t/GJ</td><td>2,948</td></tr>
-  <tr><td>公务车辆油品</td><td>范围一</td><td>38.6 t</td><td>3.1 t/t</td><td>120</td></tr></table></div>
+  <tr><td>公务车辆油品</td><td>范围一</td><td>38.6 t</td><td>3.1 t/t</td><td>120</td></tr>
+  <tr><td>绿电交易核减</td><td>范围二</td><td>-3,770 MWh</td><td>0.5366</td><td class="down">-2,023</td></tr>
+  <tr style="font-weight:700"><td>合计</td><td>范围一 + 二</td><td>—</td><td>—</td><td>22,590</td></tr></table>
+  <div class="hint">排放因子：电网采用 2022 年全国电网平均排放因子 0.5366 tCO₂/MWh；绿电消费按绿证核销量扣减</div></div>
  <div><div class="sub2">碳排放趋势 + 超排放预警 <span class="req-badge" style="position:static">#110 #111</span></div>
-  ${lineChart(["2021","2022","2023","2024","2025"],[{name:"碳排放(t)",color:"#2DD4BF",data:[19800,18600,17900,16900,16120]}],200,520)}
-  <div class="concl"><b class="red">超排放预警（需求 #111）：</b>年度碳配额 15,800 t，当前排放 16,120 t，缺口 320 t——建议购买 CCER 或绿证抵消，已推送至碳资产管理模块。</div></div>
+  ${lineChart(["2021","2022","2023","2024","2025"],[{name:"碳排放(t)",color:"#2DD4BF",data:[27500,25900,24800,23500,22590]}],200,520)}
+  <div class="concl"><b class="red">超排放预警（需求 #111）：</b>年度碳配额 22,270 t，当前排放 22,590 t，缺口 320 t——建议购买 CCER 或绿证抵消，已推送至碳资产管理模块。</div></div>
 </div>
 <div class="card"><h3>碳配置与减排措施 <span class="req-badge" style="position:static">#112–#116</span></h3>
  <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap"><button class="btn ghost sm" onclick="alert('演示：碳核算模型配置（#112）')">碳核算模型配置</button><button class="btn ghost sm" onclick="alert('演示：碳排放因子库配置，已更新 2025 版（#113）')">碳排放因子库配置（2025 版）</button><button class="btn ghost sm" onclick="alert('演示：排放源数据配置（#114）')">排放源数据配置</button></div>
@@ -37,7 +40,7 @@ RENDERERS.c1=()=>`
  <tr><td>空压站 AI 智控改造（能源大模型实时调控，节能率 30%+）</td><td><span class="tag">能效提升</span></td><td>890</td><td>实施中</td></tr>
  <tr><td>制冷机房 AI 全局优化（能效比 4.5→6.22，同步开发碳信用）</td><td><span class="tag">能效提升</span></td><td>1,650</td><td>方案评审</td></tr>
  <tr><td>数据中心液冷改造（PUE 降至 1.05，适配智算高热场景）</td><td><span class="tag">能效提升</span></td><td>1,320</td><td>实施中</td></tr>
- <tr><td>10℃ 低温余热浓缩回收（食品/化工余热梯级利用）</td><td><span class="tag">循环利用</span></td><td>740</td><td>已立项</td></tr>
+ <tr><td>10℃ 低温余热浓缩回收（化纤/装备余热梯级利用）</td><td><span class="tag">循环利用</span></td><td>740</td><td>已立项</td></tr>
  <tr><td>共享储能电站 + 全钒液流长时储能（4h 级调节能力）</td><td><span class="tag star">电网互动</span></td><td>2,100</td><td>规划中</td></tr>
  <tr><td>虚拟电厂聚合可调负荷（20MW 级，AI 毫秒级响应参与调峰）</td><td><span class="tag star">电网互动</span></td><td>1,780</td><td>平台搭建</td></tr>
  <tr><td>熔盐储热 + 蒸汽管网移峰填谷（光热互补 24h 连续供能）</td><td><span class="tag star">电网互动</span></td><td>980</td><td>规划中</td></tr>
@@ -46,13 +49,13 @@ RENDERERS.c1=()=>`
  <div class="sub2" style="margin-top:12px">先进减排技术推荐库（结合 2025–2026 行业领先实践，供园区/企业选择落地）</div>
  <table><tr><th>推荐技术</th><th>适用场景</th><th>行业标杆参考</th><th>园区落地建议</th></tr>
  <tr><td><b>AI 能效大模型智控</b></td><td>空压站、制冷机房、重点工艺参数寻优</td><td>卡奥斯「能源小智」空压站节能率超 30%、年省电费近 700 万；厦门天马制冷机房能效比 4.5→6.22，首年减碳 1.7 万t、碳信用按 65 元/t 挂牌交易</td><td>园区 4 座空压站 + 3 处集中机房率先接入，节能量经核算后开发碳信用「卖碳增收」</td></tr>
- <tr><td><b>虚拟电厂（VPP）</b></td><td>聚合储能、可调负荷、充电桩参与电网调峰与电力交易</td><td>陕西虚拟电厂平台聚合可调资源 155.8 万kW（相当于一座大型火电厂）；安徽 20MW 级 AI 虚拟电厂预测误差 ≤2.3%、毫秒级响应，服务百家企业累计提效 20%、减碳 15%</td><td>以绿洲光伏储能 60MWh + 各企业可调负荷组建园区级 VPP，参与西北省际调峰辅助服务分摊收益</td></tr>
+ <tr><td><b>虚拟电厂（VPP）</b></td><td>聚合储能、可调负荷、充电桩参与电网调峰与电力交易</td><td>陕西虚拟电厂平台聚合可调资源 155.8 万kW（相当于一座大型火电厂）；安徽 20MW 级 AI 虚拟电厂预测误差 ≤2.3%、毫秒级响应，服务百家企业累计提效 20%、减碳 15%</td><td>以宝丰储能储能 60MWh + 各企业可调负荷组建园区级 VPP，参与西北省际调峰辅助服务分摊收益</td></tr>
  <tr><td><b>长时储能</b></td><td>4h 以上跨时段调节、消纳夜间风电</td><td>全钒液流/锌铁液流电池规模化商用；固态电池高能量密度方向</td><td>共享储能电站模式（天津经开区实践）降低企业初投，采用液流路线适配园区热特性</td></tr>
- <tr><td><b>熔盐储热 + 光热互补</b></td><td>蒸汽/热力需求企业的 24h 连续供能</td><td>100MW 线性菲涅尔光热 + 熔盐储热实现全天候发电，突破绿电「靠天吃饭」</td><td>对接贺兰装备、兴庆化工蒸汽负荷，谷电/光热加热熔盐夜间放热，替代部分燃气锅炉</td></tr>
- <tr><td><b>氢电耦合</b></td><td>谷电制氢自用：燃料物流车、焊接助燃、工艺热</td><td>杭州亚运氢电耦合园区：光伏+谷电制氢氧，氢供大巴物流车、氧供焊接、余热供注塑，年节约成本约 256 万元</td><td>利用园区夜间低谷电价与绿洲光伏弃电制氢，先在物流与装备焊接场景示范</td></tr>
+ <tr><td><b>熔盐储热 + 光热互补</b></td><td>蒸汽/热力需求企业的 24h 连续供能</td><td>100MW 线性菲涅尔光热 + 熔盐储热实现全天候发电，突破绿电「靠天吃饭」</td><td>对接宇超电力装备、莱卡纤维新材料蒸汽负荷，谷电/光热加热熔盐夜间放热，替代部分燃气锅炉</td></tr>
+ <tr><td><b>氢电耦合</b></td><td>谷电制氢自用：燃料物流车、焊接助燃、工艺热</td><td>杭州亚运氢电耦合园区：光伏+谷电制氢氧，氢供大巴物流车、氧供焊接、余热供注塑，年节约成本约 256 万元</td><td>利用园区夜间低谷电价与宝丰储能弃电制氢，先在物流与装备焊接场景示范</td></tr>
  <tr><td><b>光储直柔建筑</b></td><td>办公楼宇、厂房光伏 + 直流配电 + 柔性用电</td><td>雄安智慧零碳园区：光伏地砖 + 交直流混合微电网 + 磁悬浮冷机/地源热泵复合供能，全电园区零碳运行</td><td>新建厂房按光储直柔标准设计，楼宇可调负荷联建虚拟电厂</td></tr>
  <tr><td><b>碳信用开发与交易</b></td><td>节能改造后碳资产变现</td><td>全国首个集中式制冷机房碳信用项目落地，实现从「被动减碳」到「主动赚碳」</td><td>园区统一遴选可开发碳信用的节能项目（机房智控、余热回收），打包对接碳市场</td></tr>
- <tr><td><b>CCUS（碳捕集利用与封存）</b></td><td>燃机烟气、化工工艺等难减排环节兜底</td><td>长兴岛全国首套 10 万吨级燃机低浓度烟气碳捕集装置；宝武钢铁冶金流程耦合 CCUS</td><td>兴庆精细化工先行小试论证，结合 CCER 政策与碳交易收益测算经济性</td></tr>
+ <tr><td><b>CCUS（碳捕集利用与封存）</b></td><td>燃机烟气、化工工艺等难减排环节兜底</td><td>长兴岛全国首套 10 万吨级燃机低浓度烟气碳捕集装置；宝武钢铁冶金流程耦合 CCUS</td><td>莱卡纤维新材料先行小试论证，结合 CCER 政策与碳交易收益测算经济性</td></tr>
  </table>
  <div class="hint"><b>技术选型原则（行业共识）：</b>核心运行环节优先采用商业化成熟技术（分布式光伏、储能、高效电机、AI 能效平台）；示范区域试点前沿技术（氢能、CCUS、长时储能），并预留物理空间与系统接口避免技术路径过早锁定；同时结合全生命周期成本、碳减排收益与碳交易收益综合测算，成熟技术快速推广、长周期技术借力政策激励。</div>
  <div class="hint">减排链路分析各策略下的减排能力；减排项目台账以监测视图与列表展示概览与明细（需求 #115 #116）</div></div>`;
@@ -69,7 +72,7 @@ RENDERERS.c2=()=>`<div class="grid g2">
 RENDERERS.c3=()=>`<div class="sub2">上游供应商产品碳数据 <span class="req-badge" style="position:static">#120</span></div>
 <table><tr><th>原材料编码</th><th>名称</th><th>规格</th><th>数量</th><th>产地</th><th>入库时间</th><th>单位碳排</th><th>供应商</th><th>报告</th></tr>
 <tr><td>RM-2201</td><td>PCB 板</td><td>4 层</td><td>12,000 片</td><td>广东</td><td>2025-10-18</td><td>1.82 kg/片</td><td>华南电子</td><td><span style="color:var(--cyan);cursor:pointer" onclick="alert('演示：在线预览供应商碳足迹报告与证书')">预览 ↗</span></td></tr>
-<tr><td>RM-2202</td><td>铝合金外壳</td><td>CNC</td><td>12,000 件</td><td>宁夏</td><td>2025-10-20</td><td>0.94 kg/件</td><td>银北新材料</td><td><span style="color:var(--cyan);cursor:pointer" onclick="alert('演示：在线预览')">预览 ↗</span></td></tr>
+<tr><td>RM-2202</td><td>铝合金外壳</td><td>CNC</td><td>12,000 件</td><td>宁夏</td><td>2025-10-20</td><td>0.94 kg/件</td><td>宏基新材料</td><td><span style="color:var(--cyan);cursor:pointer" onclick="alert('演示：在线预览')">预览 ↗</span></td></tr>
 <tr><td>RM-2203</td><td>包装箱</td><td>再生纸</td><td>12,000 套</td><td>甘肃</td><td>2025-10-22</td><td>0.12 kg/套</td><td>塞上包装</td><td><span style="color:var(--cyan);cursor:pointer" onclick="alert('演示：在线预览')">预览 ↗</span></td></tr></table>
 <div class="hint">支持在线预览上游供应商碳足迹报告与碳足迹证书</div>`;
 RENDERERS.c4=()=>`
@@ -125,7 +128,7 @@ RENDERERS.a3=()=>`<div class="grid g2">
   <div class="concl"><b>测算逻辑：</b>按非化石能源电力消费物理认定量占比 45% 目标倒推，现有绿证覆盖后仍缺 3,800 张，建议 Q4 集中购入。</div></div>
 </div>`;
 RENDERERS.a4=()=>`<div class="sub2">绿电项目列表（按户名 / 电压等级筛选）<span class="req-badge" style="position:static">#135 #136</span></div>
-<div style="display:flex;gap:8px;margin-bottom:10px"><select><option>全部户名</option><option>电通物联科技</option></select><select><option>全部电压等级</option><option>10kV</option><option>35kV</option></select><button class="btn ghost sm" onclick="alert('演示：筛选查询绿电项目清单')">查询</button></div>
+<div style="display:flex;gap:8px;margin-bottom:10px"><select><option>全部户名</option><option>嘉盛德电子材料</option></select><select><option>全部电压等级</option><option>10kV</option><option>35kV</option></select><button class="btn ghost sm" onclick="alert('演示：筛选查询绿电项目清单')">查询</button></div>
 <table><tr><th>项目</th><th>并网电压</th><th>年发电量(万kWh)</th><th>供电量(万kWh)</th><th>交易电量</th><th>交易金额(万元)</th><th>结算月份</th></tr>
 <tr><td>屋顶光伏一期</td><td>10kV</td><td>780</td><td>742</td><td>742</td><td>286</td><td>2025-10</td></tr>
 <tr><td>屋顶光伏二期</td><td>10kV</td><td>412</td><td>396</td><td>396</td><td>152</td><td>2025-10</td></tr></table>
@@ -139,15 +142,15 @@ RENDERERS.a5=()=>`<div class="grid g2">
  <div><div class="sub2">实时碳价 + 交易撮合 <span class="req-badge" style="position:static">#139</span></div>
   ${lineChart(["6月","7月","8月","9月","10月","11月"],[{name:"月均价(元/t)",color:"#FBBF24",data:[86.2,89.5,92.1,94.8,98.6,102.4]},{name:"实时价",color:"#F87171",data:[88,91,95,97,101,102.4]}],190,520)}
   <table><tr><th>方向</th><th>主体</th><th>可交易量(t)</th><th>期望价格(元)</th></tr>
-  <tr><td style="color:#4ADE80">卖方</td><td>绿洲光伏电力</td><td>2,000</td><td>98</td></tr>
-  <tr><td style="color:#F87171">买方</td><td>黄河生物医药</td><td>600</td><td>≤105</td></tr></table>
+  <tr><td style="color:#4ADE80">卖方</td><td>宝丰储能科技</td><td>2,000</td><td>98</td></tr>
+  <tr><td style="color:#F87171">买方</td><td>海归小镇生物医药园</td><td>600</td><td>≤105</td></tr></table>
   <div class="hint">展示可交易碳资产的卖方与买方信息，为企业碳交易提供撮合渠道（需求 #139）</div></div>
 </div>`;
 
 /* ---------- AI 智能体 #140–143 ---------- */
 reg("aiAgent",()=>`
 <div class="grid" style="grid-template-columns:2fr 1fr">
- <div class="card" style="margin-bottom:0"><h3>AI 智能问答 <span class="tag lv3">▲需源代码</span></h3><span class="req-badge">#141</span>
+ <div class="card" style="margin-bottom:0"><h3>AI 智能问答 </h3><span class="req-badge">#141</span>
   <div class="chat">
    <div class="chat-list" id="chatList">
     <div class="msg ai">您好，我是苏银产业园零碳 AI 智能体（▲#142 智能预测 / ▲#143 节能诊断 / #141 智能问答）。<br>支持语音唤醒与自然语言交互、多轮对话、上传图片附件、问答结果图表展示。<br>可基于园区知识库与碳数据解答：政策分析、能耗与碳排数据查询分析、能效诊断与优化等问题。</div>
@@ -166,7 +169,7 @@ reg("aiAgent",()=>`
    <table>${row("专用大模型","零碳园区垂直领域","统一下发")}${row("专业智能体","问数/预测/诊断/规划","4 类")}${row("场景数据集","园区 5 年能碳数据","脱敏")}${row("算法/技能组件","预测·诊断·优化","可插拔")}${row("AI 评测体系","准确率/幻觉率","季度评测")}</table>
    <div class="hint">支撑专用大模型、专业智能体、场景数据集、场景模型、算法组件、技能组件、AI 评测体系的统一研发、管理、部署与运行（需求 #140）</div></div>
   <div class="card"><h3>▲ 重要参数提示</h3>
-   <div class="concl"><b class="red">▲#142 AI智能预测：</b>融合历史与实时数据，预测能耗、碳排放、负荷及新能源出力，支撑运行优化决策——需提供系统截图佐证。</div>
+   <div class="concl"><b class="red">▲#142 AI智能预测：</b>融合历史与实时数据，预测能耗、碳排放、负荷及新能源出力，支撑运行优化决策。</div>
    <div class="concl"><b class="red">▲#143 AI节能诊断：</b>实时分析园区能耗数据，定位高耗能环节与异常，输出节能潜力、整改建议及预期收益。</div>
    <div class="hint">#141–#143 均需提供源代码</div></div>
  </div>
@@ -188,7 +191,7 @@ function askFree(){const inp=document.getElementById("chatInput");if(!inp)return
 /* ---------- 物联网平台 #144 ---------- */
 reg("iot",()=>`
 <div class="kpis" style="grid-template-columns:repeat(5,1fr)">
- ${kpi("接入设备","334","台套","在线率 98.2%","up ok")}
+ ${kpi("接入设备","333","台套","在线率 98.2%","up ok")}
  ${kpi("智能通信网关","40","台","38 台在线")}
  ${kpi("用电监测终端(低压)","65","台","数据完整率 99.1%")}
  ${kpi("用电监测终端(高压)","23","台","含互感器 195 只")}
@@ -197,10 +200,10 @@ reg("iot",()=>`
 <div class="grid g2">
  <div class="card"><h3>设备管理</h3><span class="req-badge">#144</span>
   <table><tr><th>设备</th><th>位置</th><th>状态</th><th>最近心跳</th></tr>
-  <tr><td>GW-012 智能通信网关</td><td>兴庆精细化工 配电室</td><td><span class="tag ok">在线</span></td><td>10s 前</td></tr>
-  <tr><td>LC-033 低压监测终端</td><td>贺兰装备制造 1#车间</td><td><span class="tag ok">在线</span></td><td>12s 前</td></tr>
+  <tr><td>GW-012 智能通信网关</td><td>莱卡纤维新材料 配电室</td><td><span class="tag ok">在线</span></td><td>10s 前</td></tr>
+  <tr><td>LC-033 低压监测终端</td><td>宇超电力装备 1#车间</td><td><span class="tag ok">在线</span></td><td>12s 前</td></tr>
   <tr><td>HV-008 高压监测终端</td><td>园区 10kV 开闭所</td><td><span class="tag lv2">离线 35 分钟</span></td><td>—</td></tr>
-  <tr><td>SF-002 蒸汽流量计</td><td>塞上食品加工 锅炉房</td><td><span class="tag ok">在线</span></td><td>15s 前</td></tr></table></div>
+  <tr><td>SF-002 蒸汽流量计</td><td>鲜控冷链设备 锅炉房</td><td><span class="tag ok">在线</span></td><td>15s 前</td></tr></table></div>
  <div class="card"><h3>规则引擎 / 数据服务 / 远程维护</h3><span class="req-badge">#144</span>
   <table>${row("规则引擎","告警规则 28 条 / 联动规则 12 条","含超阈值自动告警")}${row("数据服务","MQTT / REST / 数据订阅","采集周期 1–15min 可设")}${row("网关管理","远程配置 / 固件升级","支持协议扩展")}${row("远程维护","远程诊断 / 日志回传","现场免维护")}${row("基础支撑","设备影子 / 边缘缓存","断网续传 ≥72h")}</table>
   <div class="hint">物联网平台应包含基础支撑、平台门户、设备管理、规则引擎、网关管理、数据服务、远程维护等功能（需求 #144）</div></div>

@@ -497,8 +497,8 @@ function mountThree(){
   B3.filter(b=>b.ref).forEach(b=>{
    const c=COMPANIES.find(x=>x.id===b.ref);if(!c)return;
    const sp=twinPanel(c);
-   if(sp){sp.position.set(b.x+b.w*0.75,b.h*0.68,b.z);g.add(sp);
-    panels.push({sp,baseY:sp.position.y,ph:Math.random()*6.28});}
+   if(sp){sp.position.set(b.x+b.w*0.75,b.h*0.68,b.z);sp.visible=false;g.add(sp);
+    panels.push({sp,baseY:sp.position.y,ph:Math.random()*6.28,ref:b.ref});}
   });
   // ③ 园区地面扩散扫描环（自园区中心向外脉冲）
   const scanRings=[];
@@ -540,6 +540,7 @@ function mountThree(){
    if(hovered===o){if(o&&e&&tip){tip.style.left=(e.clientX+14)+"px";tip.style.top=(e.clientY+10)+"px";}return;}
    if(hovered){hovered.userData.edge.material.color.set(0x7DD3FC);hovered.material.emissive.setHex(0x0b1a2e);}
    hovered=o;
+   panels.forEach(p=>{p.sp.visible=twinOn&&(window.__t3PanelsAll||(!!o&&o.userData.ref===p.ref));});
    if(o){o.userData.edge.material.color.set(0x38BDF8);o.material.emissive.setHex(0x0e3c66);
     const u=o.userData;
     tip.innerHTML=u.ref?`<b>${u.name}</b><br>点击建筑下钻企业能碳画像`:u.info?`<b>${u.info.t}</b><br>点击查看设施介绍`:u.name;
@@ -579,6 +580,7 @@ function mountThree(){
    raf=requestAnimationFrame(animate);
    const dt=Math.min((now-last)/1000,.1);last=now;
    const el=(now-clock0)/1000;
+   if(window.__t3Cruise&&!drag)goal.theta+=dt*0.16;
    st.theta+=(goal.theta-st.theta)*.07;st.phi+=(goal.phi-st.phi)*.07;st.r+=(goal.r-st.r)*.07;
    cam.position.set(
     target.x+st.r*Math.sin(st.phi)*Math.sin(st.theta),
@@ -617,10 +619,11 @@ function mountThree(){
    zoom(z){goal.r=Math.min(380,Math.max(60,15000/z));},
    toggleFx(){twinOn=!twinOn;
     halos.forEach(h=>h.rg.visible=twinOn);
-    panels.forEach(p=>p.sp.visible=twinOn);
+    panels.forEach(p=>p.sp.visible=twinOn&&!!window.__t3PanelsAll);
     scanRings.forEach(r=>r.visible=twinOn);
     if(radarGroup)radarGroup.visible=twinOn;
     return twinOn;},
+   panelsAll(on){window.__t3PanelsAll=on;panels.forEach(p=>p.sp.visible=twinOn&&on);},
    toggleNight(){
     isNight=!isNight;
     if(isNight){

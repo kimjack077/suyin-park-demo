@@ -9,7 +9,7 @@ reg("alarm",()=>`
 </div>
 <div class="grid g3">
  <div class="card"><h3>告警等级分布</h3><span class="req-badge">#44</span>${donut([{k:"紧急",v:9},{k:"重要",v:34},{k:"次要",v:83}],150,22)}</div>
- <div class="card"><h3>产业告警占比</h3><span class="req-badge">#45</span>${donut([{k:"精细化工",v:31},{k:"新材料",v:24},{k:"装备制造",v:22},{k:"食品加工",v:19},{k:"其他",v:30}],150,22)}</div>
+ <div class="card"><h3>产业告警占比</h3><span class="req-badge">#45</span>${donut([{k:"化纤新材料",v:31},{k:"新材料",v:24},{k:"装备制造",v:22},{k:"冷链装备",v:19},{k:"其他",v:30}],150,22)}</div>
  <div class="card"><h3>企业告警排序</h3><span class="req-badge">#46</span>${hBar(COMPANIES.map(c=>({k:c.name,v:Math.round(c.co*2+4)})).sort((a,b)=>b.v-a.v).slice(0,5),150,500," 条",(it,i)=>"#FBBF24")}</div>
 </div>
 <div class="card"><h3>告警趋势（次要 / 重要 / 紧急）</h3><span class="req-badge">#47 #49</span>
@@ -49,7 +49,7 @@ reg("assess",()=>`
 <div class="grid g2">
  <div class="card"><h3>区域绩效管理：年度目标值配置</h3><span class="req-badge">#51</span>
   <table><tr><th>指标</th><th>年度</th><th>目标值</th><th>操作</th></tr>
-  ${ASSESS.slice(0,3).map(a=>`<tr><td>${a.name}</td><td>2026</td><td><input type="text" value="${(a.target*0.92).toFixed(2)}" style="width:90px"></td><td><button class="btn sm" onclick="alert('演示：目标值已保存（需求 #51）')">保存</button></td></tr>`).join("")}
+  ${ASSESS.slice(0,3).map(a=>`<tr><td>${a.name}</td><td>2026</td><td><input type="text" value="${({"单位能耗碳排放":"2.15","清洁能源消费占比":"32.0","绿电消纳率":"96.0"})[a.name]||a.target}" style="width:90px"></td><td><button class="btn sm" onclick="alert('演示：目标值已保存（需求 #51）')">保存</button></td></tr>`).join("")}
   </table><div class="hint">支持按年度配置两套指标体系下的核心数据目标值</div></div>
  <div class="card"><h3>区域低碳指标：实际值填报</h3><span class="req-badge">#52</span>
   <table><tr><th>指标</th><th>年度</th><th>实际值</th><th>状态</th></tr>
@@ -139,10 +139,10 @@ reg("report",()=>`
  <div class="grid g2">
   <div><div class="sub2">碳排放趋势分析（#60）</div><div id="rptTrend"></div></div>
   <div><div class="sub2">核算范围分析（#61）</div>${donut([{k:"范围一：燃料燃烧",v:11.2},{k:"范围一：工艺排放",v:5.7},{k:"范围二：外购电力",v:18.6},{k:"范围二：外购热力",v:6.8}],160,24)}</div>
-  <div><div class="sub2">行业碳排放构成（#63）</div>${hBar([{k:"新材料",v:10.6},{k:"装备制造",v:8.2},{k:"精细化工",v:8.1},{k:"数据服务",v:7.0},{k:"食品加工",v:5.4},{k:"其他",v:3.0}],170,560," 万tCO₂",(it,i)=>PALETTE[i%8])}</div>
+  <div><div class="sub2">行业碳排放构成（#63）</div>${hBar([{k:"新材料",v:10.6},{k:"装备制造",v:8.2},{k:"化纤新材料",v:8.1},{k:"数据服务",v:7.0},{k:"冷链装备",v:5.4},{k:"其他",v:3.0}],170,560," 万tCO₂",(it,i)=>PALETTE[i%8])}</div>
   <div><div class="sub2">碳达峰推演（#64）</div>
    <table><tr><th>情景</th><th>达峰时间</th><th>达峰值(万tCO₂)</th></tr>
-   <tr><td>低碳情景</td><td>2027 年</td><td>42.3</td></tr>
+   <tr><td>低碳情景</td><td>2027 年</td><td>43.4</td></tr>
    <tr><td>基准情景</td><td>2030 年</td><td>46.5</td></tr>
    <tr><td>零碳情景</td><td>2025（已过峰）</td><td>42.3</td></tr></table>
    <div class="sub2" style="margin-top:10px">能碳告警（▲#65）</div>
@@ -151,8 +151,8 @@ reg("report",()=>`
  </div>
  <div class="card" style="background:rgba(0,91,172,.08);margin-top:14px"><h3>结论与建议（▲#66 · 自动生成）</h3>
   <p style="line-height:2;font-size:13px"><b style="color:#4ADE80">主要成效：</b>碳排放总量同比下降 6.2%，能耗强度累计下降 21.8%，绿电消纳率 96.1% 达标，6 项考核指标中 4 项达标。</p>
-  <p style="line-height:2;font-size:13px"><b style="color:#FBBF24">存在问题与风险：</b>①单位能耗碳排放 2.53 tCO₂/tce 未达 2.40 目标；②精细化工油品碳排同比上升 1.2%；③黄河生物医药碳配额存在盈缺风险，触发超排放预警。</p>
-  <p style="line-height:2;font-size:13px"><b style="color:#38BDF8">重点工作建议：</b>①将兴庆精细化工精馏改造列入 2026 重点工程；②扩大绿电直供覆盖企业至 12 家；③对 2 家配额缺口企业提前启动 CCER 购置预案；④食品加工产业纳入告警阈值动态管理。</p>
+  <p style="line-height:2;font-size:13px"><b style="color:#FBBF24">存在问题与风险：</b>①单位能耗碳排放 2.27 tCO₂/tce 未达 2.20 年度目标；②化纤新材料油品碳排同比上升 1.2%；③海归小镇生物医药园碳配额存在盈缺风险，触发超排放预警。</p>
+  <p style="line-height:2;font-size:13px"><b style="color:#38BDF8">重点工作建议：</b>①将莱卡纤维新材料精馏改造列入 2026 重点工程；②扩大绿电直供覆盖企业至 12 家；③对 2 家配额缺口企业提前启动 CCER 购置预案；④冷链装备产业纳入告警阈值动态管理。</p>
  </div>
 </div>
 ${pageHint("本页覆盖需求 #59–#66。▲#65 能碳告警、▲#66 结论与建议为重要参数；报告须支持年/季/月切换并创建下载 PDF/Word（对应演示评分项），「结论与建议」须基于分析自动生成。")}`);
