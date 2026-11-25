@@ -1,0 +1,3008 @@
+/* ================= 数据层 ================= */
+/* 主题自适应：驾驶舱全屏（body.fs）=深色大屏；系统界面=浅色。lc(深色值,浅色值) 按当前模式取色 */
+function uiFS(){return typeof document!=="undefined"&&document.body&&document.body.classList.contains("fs");}
+function lc(d,l){return uiFS()?d:(l||d);}
+const YEARS=[2021,2022,2023,2024,2025];
+const PARK={
+ energy:[21.8,21.2,20.4,19.5,18.6], energyInt:[1.42,1.35,1.27,1.19,1.11],
+ carbon:[51.2,49.6,47.5,45.1,42.3], carbonInt:[3.34,3.16,2.96,2.75,2.53],
+ powerMix:{"传统电力":46,"外购绿电":22,"分布式光伏":18,"集中式新能源":14},
+ energyMix:{"电力":48,"燃气":22,"热力":18,"油品":8,"其他":4},
+ carbonMix:{"电力":52,"燃气":19,"热力":16,"油品":9,"其他":4},
+ monthPower:{"传统电力":[3.1,2.8,3.0,3.2,3.3,3.5,3.6,3.4,3.1,3.0,2.9,3.1],"外购绿电":[1.2,1.3,1.5,1.6,1.8,2.0,2.1,2.0,1.7,1.5,1.3,1.4],"分布式光伏":[0.9,1.0,1.2,1.4,1.6,1.8,1.9,1.7,1.4,1.1,0.9,0.9],"集中式新能源":[0.6,0.7,0.8,0.9,1.0,1.1,1.2,1.1,0.9,0.8,0.7,0.7]},
+};
+const COMPANIES=[
+ {id:1,name:"银北新材料",ind:"新材料",x:250,y:170,grade:"A",eg:"A",en:3.2,co:7.4,red:31,asset:1240,meas:"余热回收改造（10℃低温余热浓缩技术，年减排 0.42 万t）｜ 屋顶光伏 6.8MW + 钙钛矿高效组件试点 ｜ 空压站 AI 智控改造（行业标杆节能率 30%+）"},
+ {id:2,name:"电通物联科技",ind:"电子信息",x:430,y:120,grade:"A",eg:"B",en:1.1,co:2.3,red:28,asset:560,meas:"智慧空调群控 + 磁悬浮冷机复合供能 ｜ 绿电聚合交易采购占比 35% ｜ 楼宇光储直柔示范试点"},
+ {id:3,name:"贺兰装备制造",ind:"装备制造",x:600,y:210,grade:"B",eg:"B",en:2.6,co:6.1,red:19,asset:890,meas:"电炉感应加热改造 + 氢电耦合示范（谷电制氢供叉车物流）｜ 蒸汽管网熔盐储热移峰填谷 ｜ 待绿证核销"},
+ {id:4,name:"塞上食品加工",ind:"食品加工",x:330,y:330,grade:"B",eg:"C",en:1.8,co:4.0,red:15,asset:420,meas:"锅炉低氮改造 ｜ 冷库变频 + 水蓄冷蓄热调峰 ｜ 拟建分布式光伏 + 接入园区共享储能"},
+ {id:5,name:"云谷数据服务",ind:"数据服务",x:520,y:360,grade:"A",eg:"A",en:2.9,co:5.2,red:36,asset:1500,meas:"数据中心液冷改造（PUE 1.31→目标 1.05）｜ 100% 绿电交易 ｜ 余热供生活区 + 制冷机房碳信用开发（65 元/t 挂牌参考）"},
+ {id:6,name:"黄河生物医药",ind:"生物医药",x:700,y:300,grade:"C",eg:"C",en:1.4,co:3.5,red:10,asset:380,meas:"冷凝水回收 ｜ 发酵工艺 AI 参数寻优（进行中）｜ 制冷机房 AI 全局能效优化（对标行业能效比 6.22）"},
+ {id:7,name:"绿洲光伏电力",ind:"新能源",x:800,y:150,grade:"A",eg:"A",en:0.4,co:0.8,red:42,asset:2100,meas:"集中式光伏 120MW ｜ 全钒液流长时储能 60MWh（4h 级）｜ 绿电直供 + 虚拟电厂聚合参与省际调峰"},
+ {id:8,name:"兴庆精细化工",ind:"精细化工",x:200,y:420,grade:"C",eg:"B",en:2.2,co:5.8,red:12,asset:760,meas:"精馏塔热集成 ｜ 燃机低浓度烟气碳捕集（CCUS）小试论证 ｜ 防爆区计量补装 4 套 · 碳交易 2 笔"},
+];
+COMPANIES.forEach(c=>{c.en5=[c.en*1.22,c.en*1.18,c.en*1.10,c.en*1.05,c.en];c.co5=[c.co*1.25,c.co*1.19,c.co*1.11,c.co*1.06,c.co];});
+const ALARMS=[
+ {t:"2025-11-10 09:42",co:"兴庆精细化工",type:"单位能耗碳排放",lv:3,msg:"单位能耗碳排放 2.64 tCO₂/tce，超行业基准 18%",st:"待处理"},
+ {t:"2025-11-10 08:15",co:"黄河生物医药",type:"能耗",lv:2,msg:"蒸汽管线夜间流量异常升高 23%，疑似泄漏",st:"处理中"},
+ {t:"2025-11-09 22:03",co:"塞上食品加工",type:"碳排",lv:2,msg:"月度碳排超预算进度 6.2%",st:"处理中"},
+ {t:"2025-11-09 16:40",co:"贺兰装备制造",type:"能耗",lv:1,msg:"空压站比功率劣化 4%，建议巡检",st:"已闭环"},
+ {t:"2025-11-09 10:12",co:"银北新材料",type:"单位能耗碳排放",lv:1,msg:"月度单位能耗碳排放环比上升 2.1%",st:"已闭环"},
+ {t:"2025-11-08 18:30",co:"黄河生物医药",type:"碳排",lv:3,msg:"碳配额盈余预估转负，触发超排放预警",st:"待处理"},
+ {t:"2025-11-08 14:55",co:"电通物联科技",type:"能耗",lv:1,msg:"UPS 输入谐波偏高提示",st:"已闭环"},
+];
+const ASSESS=[
+ {ind:"零碳园区指标体系（试行）",name:"单位能耗碳排放",unit:"tCO₂/tce",target:2.40,actual:2.53,trend:[2.98,2.83,2.71,2.60,2.53],ok:false},
+ {ind:"零碳园区指标体系（试行）",name:"清洁能源消费占比",unit:"%",target:30,actual:28.4,trend:[21.2,23.0,24.8,26.5,28.4],ok:false},
+ {ind:"零碳园区指标体系（试行）",name:"绿电消纳率",unit:"%",target:95,actual:96.1,trend:[88,90.2,92.5,94.3,96.1],ok:true},
+ {ind:"碳达峰碳中和综合评价考核体系",name:"单位GDP碳排放下降率",unit:"%",target:8,actual:8.9,trend:[5.1,6.0,6.8,7.9,8.9],ok:true},
+ {ind:"碳达峰碳中和综合评价考核体系",name:"工业固废综合利用率",unit:"%",target:92,actual:93.5,trend:[86,88.4,90.2,92.1,93.5],ok:true},
+ {ind:"碳达峰碳中和综合评价考核体系",name:"工业用水重复利用率",unit:"%",target:90,actual:91.8,trend:[84,86.5,88.9,90.4,91.8],ok:true},
+];
+const PATHS={years:["2025","2026","2027","2028","2029","2030","2031","2032","2033","2034","2035"],
+ base:[42.3,43.6,44.8,45.7,46.3,46.5,46.2,45.6,44.8,43.9,43.0],
+ low:[42.3,42.0,41.2,40.0,38.6,37.0,35.2,33.3,31.4,29.6,27.9],
+ zero:[42.3,41.3,39.4,36.6,33.2,29.4,25.4,21.3,17.2,13.1,9.0]};
+const REPORTS={
+ y:{core:[42.3,2.53,1.11,28.4,96.1,8,100],labels:["2021","2022","2023","2024","2025"],carbon:PARK.carbon},
+ q:{core:[10.9,2.48,1.08,29.1,96.4,8,100],labels:["Q1","Q2","Q3","Q4"],carbon:[9.8,10.4,11.2,10.9]},
+ m:{core:[3.56,2.44,1.06,29.8,96.7,8,100],labels:["6月","7月","8月","9月","10月"],carbon:[3.94,4.07,3.92,3.73,3.56]},
+};
+/* 预置多轮问答树：root=新话题入口，next=回答后可追问的下一跳（id 引用），ch=回答附带的图表索引 */
+const AI_QA=[
+ {id:"a1",root:1,ch:0,q:"2025年园区碳排放多少？同比变化多少？",a:"▶ 能碳问数\n2025 年园区碳排放总量 42.3 万 tCO₂，同比下降 6.2%（2024 年 45.1 万 tCO₂）。\n· 范围一直接排放 16.9 万 tCO₂（40%）\n· 范围二间接排放 25.4 万 tCO₂（60%）\n· 主要下降原因：绿电消费占比提升至 22%，3 家企业完成节能改造\n（追问可继续：为什么下降 → 范围二怎么压减 → 纳入零碳推演）",next:["f1"]},
+ {id:"f1",q:"追问：为什么同比下降 6.2%？",a:"▶ 多轮追问 · 归因分析\n降幅 2.8 万 tCO₂，来源拆解如下：\n1. 绿电消费占比由 18.5% 提升至 22%，替代火电减排 1.68 万 tCO₂（贡献 60%）\n2. 兴庆精细化工等 3 家企业完成节能改造，节能 1.9 万 tce（贡献 25%）\n3. 锅炉低氮改造与工艺优化压减范围一 0.44 万 tCO₂（贡献 15%）\n数据可逐级下钻至企业级计量明细（区块链存证）",next:["f2","f4"]},
+ {id:"f2",q:"追问：范围二排放占 60%，怎么压减？",a:"▶ 多轮追问 · 范围二治理\n范围二 25.4 万 tCO₂ 全部来自外购电力（因子 0.5306 tCO₂/MWh），压减路径：\n1. 绿电直供扩容：绿洲光伏 120MW → 180MW，年替代减排 4.2 万 tCO₂\n2. 储能晚峰放电：覆盖 18:00–21:00 光伏退出时段，年减排 0.8 万 tCO₂\n3. 绿证抵消：剩余缺口按年度核销\n三项合计约 5 万 tCO₂/年，建议纳入 2026 年度目标值管理",next:["f3"]},
+ {id:"f3",q:"追问：把这些措施纳入零碳路径推演，效果如何？",a:"▶ 多轮追问 · 零碳路径推演\n将绿电扩容 + 储能晚峰叠加至三情景模型：\n1. 碳达峰：基准情景 2030 年（46.5 万t）→ 低碳情景提前至 2027 年\n2. 2030 年措施组合年减排 7.1 万 tCO₂，年净收益约 2,340 万元\n3. 零碳路径关键节点：2028 年绿电消纳率 ≥95%、2029 年单位能耗碳排放进入全国园区前 10%\n可在「零碳路径推演」页查看三情景对比曲线与年度措施清单",next:["f4"]},
+ {id:"f4",q:"追问：预测 2026 年碳排放趋势",a:"▶ 多轮追问 · AI智能预测\n融合 5 年历史数据 + 实时采集数据，2026 年预测：\n· 碳排放总量 39.8 万 tCO₂，同比再降 5.9%，延续下降通道\n· 若上述措施全部落地可达 37.3 万 tCO₂（额外 -6.3%）\n· 月度曲线与光伏出力强相关：5–9 月绿电高峰即排放低谷\n· 预测区间 ±2.1 万 tCO₂（置信度 90%），每季度用实测值回溯校正",next:["c1"]},
+ {id:"c1",root:1,ch:2,q:"哪些企业节能潜力最大？",a:"▶ AI节能诊断\n对 8 家重点企业实时扫描，节能潜力 TOP3：\n1. 兴庆精细化工：精馏环节能耗异常，年节能潜力 310 tce（预期收益 92 万元）\n2. 贺兰装备制造：电炉待改造，年节能潜力 280 tce（预期收益 86 万元）\n3. 塞上食品加工：冷库与锅炉效率偏低，年节能潜力 190 tce（预期收益 55 万元）\n以上建议已同步推送至对应企业端「用能策略推荐」模块",next:["c2"]},
+ {id:"c2",q:"追问：针对兴庆精细化工给出整改方案与收益测算",a:"▶ 多轮追问 · 节能诊断整改方案\n兴庆精细化工精馏环节整改方案：\n1. 更换高效再沸器 + 热集成改造：节能 210 tce/年\n2. AI 精馏塔温度寻优控制（需源代码交付项）：节能 100 tce/年\n3. 合计 310 tce/年，按 0.297 万元/tce 综合价测算年收益约 92 万元，投资回收期 1.8 年\n方案已推送至企业端「用能策略推荐」，可一键生成整改工单并跟踪闭环",next:[]},
+ {id:"b1",root:1,q:"给出园区零碳规划的路径建议",a:"▶ 零碳规划\n基于基准/低碳/零碳三情景推演：\n1. 碳达峰：基准情景 2030 年达峰（46.5 万t）；低碳情景可提前至 2027 年\n2. 优先措施：绿电直供扩容（年减排 4.2 万t）、数据中心余热利用（1.1 万t）、装备企业电炉改造（1.8 万t）\n3. 年净收益：低碳情景 2030 年措施组合约 2,340 万元\n4. 建议将绿电消纳率、单位能耗碳排放列入年度目标值管理\n（追问可继续：纳入推演后的达峰时间 → 2026 碳排预测）",next:["f3","f4"]},
+ {id:"d1",root:1,ch:3,q:"预测明年园区用电负荷",a:"▶ AI智能预测\n融合 5 年历史数据 + 实时采集数据，预测窗口 2026 年：\n· 总用电量预测 13.2 亿 kWh，同比增长 3.1%\n· 夏季峰值负荷 186 MW（7 月下旬）\n· 分布式光伏出力预计增长 18%，可抵消负荷增长的 58%\n· 新能源出力与负荷错配时段集中在 18:00–21:00，建议储能放电覆盖晚峰\n（追问可继续：负荷预测对应的 2026 年碳排趋势）",next:["f4"]},
+];
+/* ================= 图表工具 ================= */
+const PALETTE=["#2E8BC0","#2DD4BF","#FBBF24","#A78BFA","#F87171","#38BDF8","#4ADE80","#3E5C82"];
+function svgOpen(h,w){return `<svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="xMidYMid meet">`;}
+function svgDonut(data,size=150,thick=22){
+ const total=data.reduce((s,d)=>s+d.v,0);let a0=-90,segs="";
+ const r=(size-thick)/2,cx=size/2,cy=size/2;
+ data.forEach((d,i)=>{const frac=d.v/total,a1=a0+frac*360,large=frac>0.5?1:0;
+  const x0=cx+r*Math.cos(a0*Math.PI/180),y0=cy+r*Math.sin(a0*Math.PI/180);
+  const x1=cx+r*Math.cos(a1*Math.PI/180),y1=cy+r*Math.sin(a1*Math.PI/180);
+  segs+=`<path d="M ${x0} ${y0} A ${r} ${r} 0 ${large} 1 ${x1} ${y1}" fill="none" stroke="${PALETTE[i%8]}" stroke-width="${thick}"><title>${d.k}：${d.v}${d.u||""}（${(frac*100).toFixed(1)}%）</title></path>`;a0=a1;});
+ const legend=data.map((d,i)=>`<span><i style="background:${PALETTE[i%8]}"></i>${d.k} ${d.v}${d.u||""} · ${(d.v/total*100).toFixed(1)}%</span>`).join("");
+ return svgOpen(size,size)+segs+`<text x="${cx}" y="${cy-4}" text-anchor="middle" fill="${lc("#fff","#1B2B3F")}" font-size="15" font-weight="700">${+total.toFixed(2)}</text><text x="${cx}" y="${cy+14}" text-anchor="middle" fill="${lc("#5D7A9C","#8397AC")}" font-size="10">合计</text></svg><div class="legend">${legend}</div>`;
+}
+function svgComboBarLine(labels,barName,bar,lineName,line,h=220,w=520,u1="",u2=""){
+ const pl=44,pr=44,pb=26,pt=14,cw=w-pl-pr,ch=h-pt-pb,n=labels.length;
+ const bMax=Math.max(...bar)*1.15,lMin=Math.min(...line)*0.85,lMax=Math.max(...line)*1.1;
+ let bars="",lines="",dots="",grid="",axis="";
+ for(let g=0;g<=4;g++){const y=pt+ch*g/4;grid+=`<line x1="${pl}" y1="${y}" x2="${w-pr}" y2="${y}" stroke="${lc("#1E3A5C","#DCE6F1")}" stroke-width=".6"/>`;
+  axis+=`<text x="${pl-6}" y="${y+4}" text-anchor="end" fill="${lc("#5D7A9C","#8397AC")}" font-size="10">${(bMax*(1-g/4)).toFixed(bMax<10?1:0)}</text><text x="${w-pr+6}" y="${y+4}" fill="${lc("#5D7A9C","#8397AC")}" font-size="10">${(lMin+(lMax-lMin)*g/4).toFixed(1)}</text>`;}
+ bar.forEach((v,i)=>{const bh=v/bMax*ch,x=pl+cw*(i+0.25)/n,y=pt+ch-bh;
+  bars+=`<rect x="${x}" y="${y}" width="${cw/n*0.5}" height="${bh}" fill="#2E8BC0" rx="2"><title>${labels[i]}：${v}${u1}</title></rect>`;
+  const lv=(line[i]-lMin)/(lMax-lMin)*ch,lx=pl+cw*(i+0.5)/n,ly=pt+ch-lv;
+  dots+=`<circle cx="${lx}" cy="${ly}" r="3.5" fill="#FBBF24"><title>${labels[i]} ${lineName}：${line[i]}${u2}</title></circle>`;
+  lines+=(i?" L ":"M ")+lx+" "+ly;});
+ labels.forEach((lb,i)=>{axis+=`<text x="${pl+cw*(i+0.5)/n}" y="${h-8}" text-anchor="middle" fill="${lc("#8FA8C4","#5A7089")}" font-size="10">${lb}</text>`;});
+ return svgOpen(h,w)+grid+bars+`<path d="${lines}" fill="none" stroke="#FBBF24" stroke-width="2"/>`+dots+axis+
+  `<text x="${pl}" y="${pt-2}" fill="#2E8BC0" font-size="10">■ ${barName}</text><text x="${pl+95}" y="${pt-2}" fill="#FBBF24" font-size="10">— ${lineName}</text></svg>`;
+}
+function svgLineChart(labels,series,h=230,w=540){
+ const pl=46,pr=16,pb=24,pt=14,all=series.flatMap(s=>s.data);
+ const mn=Math.min(...all)*0.92,mx=Math.max(...all)*1.06,cw=w-pl-pr,ch=h-pt-pb,n=labels.length;
+ let grid="",axis="",paths="",dots="";
+ for(let g=0;g<=4;g++){const y=pt+ch*g/4;grid+=`<line x1="${pl}" y1="${y}" x2="${w-pr}" y2="${y}" stroke="${lc("#1E3A5C","#DCE6F1")}" stroke-width=".6"/>`;
+  axis+=`<text x="${pl-6}" y="${y+4}" text-anchor="end" fill="${lc("#5D7A9C","#8397AC")}" font-size="10">${(mx-(mx-mn)*g/4).toFixed(1)}</text>`;}
+ series.forEach(s=>{let p="";
+  s.data.forEach((v,i)=>{const x=pl+cw*i/(n-1),y=pt+ch-(v-mn)/(mx-mn)*ch;
+   p+=(i?" L ":"M ")+x+" "+y;
+   dots+=`<circle cx="${x}" cy="${y}" r="3" fill="${s.color}"><title>${labels[i]} ${s.name}：${v}</title></circle>`;});
+  paths+=`<path d="${p}" fill="none" stroke="${s.color}" stroke-width="2"/>`;});
+ labels.forEach((lb,i)=>{axis+=`<text x="${pl+cw*i/(n-1)}" y="${h-6}" text-anchor="middle" fill="${lc("#8FA8C4","#5A7089")}" font-size="10">${lb}</text>`;});
+ const legend=series.map(s=>`<span><i style="background:${s.color}"></i>${s.name}</span>`).join("");
+ return svgOpen(h,w)+grid+paths+dots+axis+`</svg><div class="legend">${legend}</div>`;
+}
+function svgStackedBar(labels,series,h=230,w=540){
+ const pl=46,pr=16,pb=24,pt=12,totals=labels.map((_,i)=>series.reduce((s,d)=>s+d.data[i],0));
+ const mx=Math.max(...totals)*1.12,cw=w-pl-pr,ch=h-pt-pb,n=labels.length,bw=cw/n*0.55;
+ let grid="",axis="",rects="";
+ for(let g=0;g<=4;g++){const y=pt+ch*g/4;grid+=`<line x1="${pl}" y1="${y}" x2="${w-pr}" y2="${y}" stroke="${lc("#1E3A5C","#DCE6F1")}" stroke-width=".6"/>`;
+  axis+=`<text x="${pl-6}" y="${y+4}" text-anchor="end" fill="${lc("#5D7A9C","#8397AC")}" font-size="10">${(mx*(1-g/4)).toFixed(1)}</text>`;}
+ labels.forEach((lb,i)=>{let acc=0;
+  series.forEach(s=>{const bh=s.data[i]/mx*ch,y=pt+ch-acc-bh,x=pl+cw*(i+0.225)/n;
+   rects+=`<rect x="${x}" y="${y}" width="${bw}" height="${Math.max(bh,0.5)}" fill="${s.color}"><title>${lb} ${s.name}：${s.data[i]}</title></rect>`;acc+=bh;});
+  axis+=`<text x="${pl+cw*(i+0.5)/n}" y="${h-6}" text-anchor="middle" fill="${lc("#8FA8C4","#5A7089")}" font-size="10">${lb}</text>`;});
+ const legend=series.map(s=>`<span><i style="background:${s.color}"></i>${s.name}</span>`).join("");
+ return svgOpen(h,w)+grid+rects+axis+`</svg><div class="legend">${legend}</div>`;
+}
+function svgHBar(items,h=220,w=520,unit="",colorFn=null){
+ const rowH=Math.min(30,h/Math.max(items.length,1)),pl=Math.max(96,Math.max(...items.map(i=>i.k.length))*11+26),pr=62,barMax=w-pl-pr;
+ const mx=Math.max(...items.map(i=>Math.abs(i.v)));let s="";
+ items.forEach((it,i)=>{const y=i*rowH+rowH*0.2,bw=Math.abs(it.v)/mx*barMax,col=colorFn?colorFn(it,i):(it.c||"#2E8BC0");
+  s+=`<text x="${pl-8}" y="${y+rowH*0.42}" text-anchor="end" fill="${lc("#8FA8C4","#5A7089")}" font-size="11">${it.k}</text>`;
+  s+=`<rect x="${pl}" y="${y}" width="${bw}" height="${rowH*0.6}" fill="${col}" rx="2"><title>${it.k}：${it.v}${unit}</title></rect>`;
+  s+=`<text x="${pl+bw+6}" y="${y+rowH*0.42}" fill="${lc("#DCE8F5","#33475E")}" font-size="11">${it.v}${unit}</text>`;});
+ return svgOpen(items.length*rowH+10,w)+s+"</svg>";
+}
+/* ================= 通用组件 ================= */
+function kpi(l,v,u,d,cls){return `<div class="kpi"><div class="l">${l}</div><div class="v">${v}<small> ${u||""}</small></div><div class="d ${cls||""}">${d||""}</div></div>`;}
+function row(k,v,d){return `<tr><td>${k}</td><td style="color:${lc("#fff","#0B4E8F")};font-family:Consolas">${v}</td><td style="color:${lc("#8FA8C4","#5A7089")}">${d||""}</td></tr>`;}
+function pageHint(t){return `<div class="card"><h3>需求覆盖说明</h3><div class="hint" style="font-size:12px">${t}</div></div>`;}
+function showModal(title,html){const m=document.getElementById("modalBox");m.innerHTML=`<h3>${title}<span class="x" onclick="hideModal()">×</span></h3>${html}`;document.getElementById("modalMask").classList.add("show");}
+function hideModal(){document.getElementById("modalMask").classList.remove("show");}
+document.getElementById("modalMask").addEventListener("click",e=>{if(e.target.id==="modalMask")hideModal();});
+function bindTabs(){
+ document.querySelectorAll(".tabs").forEach(tabs=>{
+  tabs.querySelectorAll(".tab").forEach(t=>t.onclick=()=>{
+   tabs.querySelectorAll(".tab").forEach(x=>x.classList.remove("on"));t.classList.add("on");
+   const pane=tabs.parentElement;
+   pane.querySelectorAll(".tabpane").forEach(p=>p.classList.remove("on"));
+   const target=pane.querySelector("#tp-"+t.dataset.t);
+   if(target){target.classList.add("on");}
+   else{const body=pane.querySelector("#tabBody");if(body&&RENDERERS[t.dataset.t])body.innerHTML=RENDERERS[t.dataset.t]();}
+  });});
+}
+
+/* ================= ECharts 渲染引擎（在线增强渲染，离线/无画布时自动回退内置 SVG） ================= */
+const _svgDonut=svgDonut,_svgCombo=svgComboBarLine,_svgLine=svgLineChart,_svgStack=svgStackedBar,_svgHBar=svgHBar;
+let ECHN=0,ECHQ=[],ECHL=[];
+function canvasOK(){try{const c=document.createElement("canvas");return !!(c.getContext&&c.getContext("2d"));}catch(e){return false;}}
+function echOK(){return typeof echarts!=="undefined"&&canvasOK();}
+function echPlace(h,build,svgFallback,extraHTML){
+ const id="ech"+(++ECHN);
+ ECHQ.push({id,build,svgFallback});
+ setTimeout(flushCharts,0);
+ return `<div class="ech" id="${id}" style="height:${h}px;width:100%"></div>${extraHTML||""}`;
+}
+function flushCharts(){
+ ECHL=ECHL.filter(x=>{if(!x.el.isConnected){try{x.inst.dispose();}catch(e){}return false;}return true;});
+ const q=ECHQ.splice(0,ECHQ.length);
+ q.forEach(e=>{
+  const el=document.getElementById(e.id);if(!el)return;
+  if(el.offsetWidth<5){ECHQ.push(e);return;} /* 所在页签未显示，等待可见后再渲染 */
+  if(!echOK()){el.outerHTML=e.svgFallback;return;}
+  try{const inst=echarts.init(el,null,{renderer:"canvas"});e.build(inst);ECHL.push({el,inst});}
+  catch(err){el.innerHTML=e.svgFallback;}
+ });
+}
+function resizeCharts(){ECHL.forEach(x=>{try{x.inst.resize();}catch(e){}});}
+window.addEventListener("resize",()=>setTimeout(()=>{flushCharts();resizeCharts();},80));
+/* ---- ECharts 通用主题（驾驶舱 fs=深色 / 系统界面=浅色，渲染时按当前模式取色） ---- */
+const AX=()=>uiFS()?"#1E3A5C":"#C9D7E6";
+const ETXT2=()=>uiFS()?"#8FA8C4":"#5A7089";
+const ETXT3=()=>uiFS()?"#5D7A9C":"#8598AC";
+const TT=()=>({backgroundColor:uiFS()?"#152844":"#FFFFFF",borderColor:uiFS()?"#2E8BC0":"#B9D2EA",borderWidth:1,
+ textStyle:{color:uiFS()?"#DCE8F5":"#1B2B3F"},
+ extraCssText:"box-shadow:0 8px 20px rgba(0,0,0,.45);border-radius:6px;"});
+function vgrad(c1,c2){return new echarts.graphic.LinearGradient(0,0,0,1,[{offset:0,color:c1},{offset:1,color:c2}]);}
+function hgrad(c1,c2){return new echarts.graphic.LinearGradient(1,0,0,0,[{offset:0,color:c1},{offset:1,color:c2}]);}
+function axCommon(extra){return Object.assign({axisLine:{lineStyle:{color:AX()}},axisTick:{show:false},axisLabel:{color:ETXT2(),fontSize:10}},extra||{});}
+function splitX(){return{splitLine:{lineStyle:{color:AX(),type:"dashed",opacity:.7}}};}
+/* ================= 图表函数（ECharts 版，签名与原 SVG 版一致） ================= */
+function donut(data,size=150,thick=22){
+ if(!echOK())return _svgDonut(data,size,thick);
+ const total=data.reduce((s,d)=>s+d.v,0);
+ const legend=data.map((d,i)=>`<span><i style="background:${PALETTE[i%8]}"></i>${d.k} ${d.v}${d.u||""} · ${(d.v/total*100).toFixed(1)}%</span>`).join("");
+ return echPlace(size,inst=>{inst.setOption({
+  backgroundColor:"transparent",tooltip:Object.assign({trigger:"item",formatter:"{b}：{c}（{d}%）"},TT()),
+  title:{text:String(+total.toFixed(2)),subtext:"合计",left:"center",top:"36%",
+   textStyle:{color:uiFS()?"#fff":"#1B2B3F",fontSize:16,fontWeight:700},subtextStyle:{color:ETXT3(),fontSize:10}},
+  series:[{type:"pie",radius:["60%","86%"],center:["50%","52%"],
+   itemStyle:{borderRadius:6,borderColor:uiFS()?"#101F35":"#FFFFFF",borderWidth:2},
+   label:{show:false},emphasis:{scale:true,scaleSize:6},
+   data:data.map((d,i)=>({name:d.k,value:d.v,itemStyle:{color:PALETTE[i%8]}}))}]});
+ },_svgDonut(data,size,thick),`<div class="legend">${legend}</div>`);
+}
+function comboBarLine(labels,barName,bar,lineName,line,h=220,w=520,u1="",u2=""){
+ if(!echOK())return _svgCombo(labels,barName,bar,lineName,line,h,w,u1,u2);
+ return echPlace(h,inst=>{inst.setOption({
+  backgroundColor:"transparent",tooltip:Object.assign({trigger:"axis",axisPointer:{type:"shadow"}},TT()),
+  legend:{top:2,textStyle:{color:ETXT2(),fontSize:11},itemWidth:14,itemHeight:8,icon:"roundRect"},
+  grid:{left:56,right:56,top:34,bottom:26},
+  xAxis:Object.assign({type:"category",data:labels},axCommon()),
+  yAxis:[Object.assign({type:"value",name:barName,nameTextStyle:{color:ETXT3(),fontSize:10}},axCommon(),splitX()),
+         Object.assign({type:"value",name:lineName,nameTextStyle:{color:ETXT3(),fontSize:10}},axCommon(),{splitLine:{show:false}})],
+  series:[
+   {name:barName,type:"bar",data:bar,barMaxWidth:26,
+    itemStyle:{borderRadius:[4,4,0,0],color:vgrad("#38BDF8","#1D5FA8")},
+    tooltip:{valueFormatter:v=>v+u1}},
+   {name:lineName,type:"line",data:line,yAxisIndex:1,smooth:true,symbol:"circle",symbolSize:7,
+    lineStyle:{width:2.5,color:"#FBBF24",shadowColor:"rgba(251,191,36,.5)",shadowBlur:8},
+    itemStyle:{color:"#FBBF24",borderColor:uiFS()?"#0A1628":"#FFFFFF",borderWidth:1},
+    tooltip:{valueFormatter:v=>v+u2}}]});
+ },_svgCombo(labels,barName,bar,lineName,line,h,w,u1,u2));
+}
+function lineChart(labels,series,h=230,w=540){
+ if(!echOK())return _svgLine(labels,series,h,w);
+ return echPlace(h,inst=>{inst.setOption({
+  backgroundColor:"transparent",tooltip:Object.assign({trigger:"axis"},TT()),
+  legend:{top:2,textStyle:{color:ETXT2(),fontSize:11},itemWidth:14,itemHeight:8,icon:"roundRect"},
+  grid:{left:52,right:24,top:32,bottom:26},
+  xAxis:Object.assign({type:"category",data:labels,boundaryGap:false},axCommon()),
+  yAxis:Object.assign({type:"value"},axCommon(),splitX()),
+  series:series.map(s=>Object.assign({name:s.name,type:"line",data:s.data,smooth:true,
+   symbol:"circle",symbolSize:6,
+   lineStyle:{width:2.5,color:s.color,shadowColor:s.color+"88",shadowBlur:10},
+   itemStyle:{color:s.color,borderColor:uiFS()?"#0A1628":"#FFFFFF",borderWidth:1}},
+   series.length<=2?{areaStyle:{color:vgrad(s.color+"2E","rgba(10,22,40,0)")}}:{}))});
+ },_svgLine(labels,series,h,w));
+}
+function stackedBar(labels,series,h=230,w=540){
+ if(!echOK())return _svgStack(labels,series,h,w);
+ return echPlace(h,inst=>{inst.setOption({
+  backgroundColor:"transparent",tooltip:Object.assign({trigger:"axis",axisPointer:{type:"shadow"}},TT()),
+  legend:{top:2,textStyle:{color:ETXT2(),fontSize:11},itemWidth:14,itemHeight:8,icon:"roundRect"},
+  grid:{left:52,right:24,top:32,bottom:26},
+  xAxis:Object.assign({type:"category",data:labels},axCommon()),
+  yAxis:Object.assign({type:"value"},axCommon(),splitX()),
+  series:series.map((s,si)=>({name:s.name,type:"bar",stack:"total",data:s.data,
+   itemStyle:{color:vgrad(s.color,s.color+"66"),borderRadius:si===series.length-1?[4,4,0,0]:0},
+   emphasis:{focus:"series"}}))});
+ },_svgStack(labels,series,h,w));
+}
+function hBar(items,h=220,w=520,unit="",colorFn=null){
+ if(!echOK())return _svgHBar(items,h,w,unit,colorFn);
+ const hh=Math.max(items.length*30+10,60);
+ const gl=Math.max(96,Math.max(...items.map(i=>i.k.length))*11+30); /* 标签区宽度随最长名称自适应 */
+ return echPlace(hh,inst=>{inst.setOption({
+  backgroundColor:"transparent",tooltip:Object.assign({trigger:"item"},TT()),
+  grid:{left:gl,right:70,top:8,bottom:8},
+  xAxis:Object.assign({type:"value",axisLabel:{show:false},axisLine:{show:false}},
+   {splitLine:{lineStyle:{color:AX(),opacity:.5,type:"dashed"}}}),
+  yAxis:Object.assign({type:"category",data:items.map(i=>i.k).reverse()},
+   {axisLabel:{color:ETXT2(),fontSize:11,interval:0,hideOverlap:true},axisLine:{lineStyle:{color:AX()}},axisTick:{show:false}}),
+  series:[{type:"bar",barMaxWidth:14,
+   data:items.slice().reverse().map((it,i)=>{
+    const col=colorFn?colorFn(it,items.length-1-i):(it.c||"#2E8BC0");
+    return {value:it.v,itemStyle:{color:hgrad(col,col+"66"),borderRadius:[0,6,6,0]}};}),
+   label:{show:true,position:"right",color:uiFS()?"#DCE8F5":"#33475E",fontSize:11,formatter:p=>p.value+unit}}]});
+ },_svgHBar(items,h,w,unit,colorFn));
+}
+/* 页签切换后：补渲染隐藏期间排队的图表 + 重算尺寸 */
+function bindTabs(){
+ document.querySelectorAll(".tabs").forEach(tabs=>{
+  tabs.querySelectorAll(".tab").forEach(t=>t.onclick=()=>{
+   tabs.querySelectorAll(".tab").forEach(x=>x.classList.remove("on"));t.classList.add("on");
+   const pane=tabs.parentElement;
+   pane.querySelectorAll(".tabpane").forEach(p=>p.classList.remove("on"));
+   const target=pane.querySelector("#tp-"+t.dataset.t);
+   if(target){target.classList.add("on");}
+   else{const body=pane.querySelector("#tabBody");if(body&&RENDERERS[t.dataset.t]){body.innerHTML=RENDERERS[t.dataset.t]();
+    if(t.dataset.t==="m1")m1Update();
+    if(t.dataset.t==="m2")m2Update();
+    if(t.dataset.t==="m4")m4Update("co");}}
+   setTimeout(()=>{flushCharts();resizeCharts();},60);
+  });});
+}
+
+/* ================= 桑基图（能流图 / 碳流图）通用组件 ================= */
+/* 保留桑基图本体样式：左侧彩色竖条源节点 + 半透明流带（贝塞尔 ribbon）+ 右侧汇聚竖条节点；
+   外壳跟随页面深色主题（var(--panel)/var(--line)），弹窗内可用裸图模式（透明背景） */
+(function(){
+ var css=`
+ .sk-card{background:var(--panel);border:1px solid var(--line);border-radius:6px;margin:0 0 14px;overflow:hidden;}
+ .sk-hd{display:flex;align-items:center;gap:10px;padding:13px 16px 11px;border-bottom:1px solid var(--line);flex-wrap:wrap;}
+ .sk-hd b{font-size:15px;font-weight:700;color:#FFFFFF;letter-spacing:.5px;}
+ .sk-hd .sk-sub{font-size:12px;color:var(--txt2);margin-left:2px;}
+ .sk-tools{display:flex;align-items:center;gap:10px;margin-left:auto;flex-wrap:wrap;}
+ .sk-tools .sk-dim{font-size:12px;color:var(--txt2);font-weight:600;}
+ .sk-co{font-size:13px;color:var(--cyan);font-weight:600;cursor:pointer;letter-spacing:.3px;}
+ .sk-co:hover{text-decoration:underline;}
+ .sk-sel{border:1px solid var(--line);border-radius:5px;background:var(--panel2);color:var(--txt);font-size:12px;padding:4px 10px;outline:none;cursor:pointer;}
+ .sk-sel:hover{border-color:#38BDF8;}
+ .sk-legend{font-size:11px;color:var(--txt3);}
+ .sk-body{padding:8px 16px 10px;}
+ .sk-body svg,.sk-bare svg{width:100%;height:auto;display:block;}
+ .sk-bare{width:100%;}
+ .sk-lb,.sk-rlb{font-size:14px;fill:#DCE8F5;font-weight:600;paint-order:stroke;stroke:rgba(10,22,40,.78);stroke-width:3px;}
+ .sk-nv{font-size:11px;fill:#BFD6EC;font-family:Consolas,"Microsoft YaHei",monospace;font-weight:400;paint-order:stroke;stroke:rgba(10,22,40,.8);stroke-width:2.5px;}
+ .sk-val{font-size:11px;fill:#BFD6EC;font-family:Consolas,"Microsoft YaHei",monospace;}
+ .sk-pill{fill:rgba(10,22,40,.88);stroke:#1E3A5C;stroke-width:1;}
+ .sk-ribbon{transition:opacity .18s;}
+ .sk-ribbon:hover{opacity:.7;cursor:pointer;}
+ .sk-node rect:hover{opacity:.82;cursor:pointer;}
+ .sk-note{padding:2px 16px 14px;font-size:12px;color:var(--txt2);line-height:1.75;}
+ `;
+ document.head.insertAdjacentHTML("beforeend","<style>"+css+"</style>");
+})();
+
+/* 时间维度：年度 / 季度 / 月度，按系数缩放流量数值（结构与占比保持守恒） */
+const SK_SCALE={y:1,q:0.26,m:0.085};
+const SK_LB={y:"年度",q:"季度",m:"月度"};
+const SANKEY_STATE={};
+
+/* 数据：left/right 为节点（color=竖条色，fill=流带浅色）；links=[源序号,汇序号,流量]
+   节点高度与流带厚度全部由 links 自动推导，保证流量守恒、左右对齐 */
+const SANKEY_DATA={
+ /* 驾驶舱 · 能流图（园区级） */
+ dash_en:{
+  title:"能流分析",sub:"园区级 · 主要能源品种流向",unit:"万tce",h:330,gapL:24,gapR:28,
+  left:[{name:"汽油",color:"#F3C04A",fill:"rgba(243,192,74,.42)"},{name:"柴油",color:"#5AA6DC",fill:"rgba(90,166,220,.42)"},
+        {name:"天然气",color:"#F58F6E",fill:"rgba(245,143,110,.42)"},{name:"电力",color:"#9B6FC4",fill:"rgba(155,111,196,.45)"}],
+  right:[{name:"化石燃料燃烧",color:"#2E9E63"},{name:"购入电力",color:"#2F7FD1"}],
+  links:[[0,0,2.4],[1,0,2.1],[2,0,4.6],[3,1,8.9]],
+  note:"按能源品种归集至化石燃料燃烧与购入电力两类核算路径，流带宽度对应折标后的综合能耗量；与碳排放核算共用同一套能源台账，保证一张图上的指标数据可直接用于零碳园区创建评价。在「切换对象」中选择具体企业，可查看该企业差异化的能流结构，并点击节点或按钮下钻企业画像。"
+ },
+ /* 驾驶舱 · 碳流图（园区级） */
+ dash_co:{
+  title:"碳流分析",sub:"园区级 · 碳排放按核算范围归集",unit:"万tCO₂",h:330,gapL:24,gapR:28,
+  left:[{name:"范围一 · 燃料燃烧",color:"#F87171",fill:"rgba(248,113,113,.42)"},{name:"范围一 · 工艺过程",color:"#FBBF24",fill:"rgba(251,191,36,.40)"},
+        {name:"范围二 · 外购电力",color:"#38BDF8",fill:"rgba(56,189,248,.42)"},{name:"范围二 · 外购热力",color:"#A78BFA",fill:"rgba(167,139,250,.42)"}],
+  right:[{name:"直接排放（范围一）",color:"#2E9E63"},{name:"间接排放（范围二）",color:"#2F7FD1"}],
+  links:[[0,0,11.2],[1,0,5.7],[2,1,21.5],[3,1,3.9]],
+  note:"范围一直接排放 16.9 万tCO₂、范围二间接排放 25.4 万tCO₂，合计 42.3 万tCO₂；排放因子与折标系数由系统统一版本管理，核算结果与碳考核评价体系共用同一套口径，可直接用于年度评价与报告编制。在「切换对象」中选择具体企业，可查看该企业范围一/二排放结构，并点击节点或按钮下钻企业画像。"
+ }
+};
+
+function skFmt(v){return (Math.round(v*10)/10).toFixed(1);}
+
+/* 生成桑基图 SVG（纯字符串，无外部依赖；支持 W/xL/xRm 紧凑参数适配弹窗小图） */
+function sankeySvg(key,period){
+ const d=SANKEY_DATA[key];if(!d)return "";
+ const k=SK_SCALE[period]||1;
+ const W=d.W||980,H=d.h||330,PT=16,PB=16,nW=13;
+ const xL=d.xL!=null?d.xL:62,xRm=d.xRm!=null?d.xRm:172;
+ const xR=W-xRm,x0=xL+nW,x1=xR,cx=(x0+x1)/2;
+ const gapL=d.gapL||24,gapR=d.gapR||28;
+ const links=d.links.map(l=>({li:l[0],ri:l[1],v:l[2]}));
+ const lv=d.left.map((_,i)=>links.filter(l=>l.li===i).reduce((s,l)=>s+l.v,0));
+ const rv=d.right.map((_,j)=>links.filter(l=>l.ri===j).reduce((s,l)=>s+l.v,0));
+ const total=links.reduce((s,l)=>s+l.v,0)||1;
+ const avail=H-PT-PB;
+ const scale=Math.min((avail-gapL*(d.left.length-1))/total,(avail-gapR*(d.right.length-1))/total);
+ const lh=total*scale+gapL*(d.left.length-1),rh=total*scale+gapR*(d.right.length-1);
+ const yL=PT+(avail-lh)/2,yR=PT+(avail-rh)/2;
+ let cy=yL;const LN=d.left.map((n,i)=>{const h=lv[i]*scale;const o={y:cy,h:h};cy+=h+gapL;return o;});
+ cy=yR;const RN=d.right.map((n,j)=>{const h=rv[j]*scale;const o={y:cy,h:h};cy+=h+gapR;return o;});
+ const offL=d.left.map(()=>0),offR=d.right.map(()=>0);
+ let ribbons="",labels="";
+ links.forEach((l,li)=>{
+  const t=l.v*scale,a=LN[l.li].y+offL[l.li],b=RN[l.ri].y+offR[l.ri];
+  offL[l.li]+=t;offR[l.ri]+=t;
+  const s=d.left[l.li],tn=d.right[l.ri],val=skFmt(l.v*k);
+  const p=`M ${x0} ${a} C ${cx} ${a}, ${cx} ${b}, ${x1} ${b} L ${x1} ${b+t} C ${cx} ${b+t}, ${cx} ${a+t}, ${x0} ${a+t} Z`;
+  ribbons+=`<path class="sk-ribbon" d="${p}" fill="${s.fill}" stroke="rgba(10,22,40,.9)" stroke-width="1"><title>${s.name} → ${tn.name}：${val} ${d.unit}</title></path>`;
+  /* 多流带交汇时，数值标签沿横向分列错开，避免挤成一竖列 */
+  const lx=x0+(x1-x0)*(0.23+(li%3)*0.145),ly=(a+b)/2+t/2,tw=Math.max(46,val.length*7+18);
+  labels+=`<g><rect class="sk-pill" x="${(lx-tw/2).toFixed(1)}" y="${(ly-10).toFixed(1)}" width="${tw}" height="20" rx="10"/><text class="sk-val" x="${lx.toFixed(1)}" y="${(ly+4).toFixed(1)}" text-anchor="middle">${val}</text></g>`;
+ });
+ let nodes="";
+ const drill=d.drill?` onclick="coModal(${d.drill})" style="cursor:pointer"`:"";
+ const drillTip=d.drill?`<title>${d.drillTip||"点击下钻企业画像"}</title>`:"";
+ d.left.forEach((n,i)=>{const o=LN[i];
+  const nv=d.showNV===false?"":`<text class="sk-nv" x="${x0+14}" y="${(o.y+o.h/2+18).toFixed(1)}">${skFmt(lv[i]*k)} ${d.unit}</text>`;
+  nodes+=`<g class="sk-node"${drill}>${drillTip}<rect x="${xL}" y="${o.y.toFixed(1)}" width="${nW}" height="${Math.max(o.h,2).toFixed(1)}" rx="2" fill="${n.color}"><title>${n.name}：${skFmt(lv[i]*k)} ${d.unit}</title></rect>`+
+   `<text class="sk-lb" x="${x0+14}" y="${(o.y+o.h/2+5).toFixed(1)}">${n.name}</text>${nv}</g>`;});
+ d.right.forEach((n,j)=>{const o=RN[j];
+  const nv=d.showNV===false?"":`<text class="sk-nv" x="${xR+nW+14}" y="${(o.y+o.h/2+18).toFixed(1)}">${skFmt(rv[j]*k)} ${d.unit}</text>`;
+  nodes+=`<g class="sk-node"${drill}>${drillTip}<rect x="${xR}" y="${o.y.toFixed(1)}" width="${nW}" height="${Math.max(o.h,2).toFixed(1)}" rx="2" fill="${n.color}"><title>${n.name}：${skFmt(rv[j]*k)} ${d.unit}</title></rect>`+
+   `<text class="sk-rlb" x="${xR+nW+14}" y="${(o.y+o.h/2+5).toFixed(1)}">${n.name}</text>${nv}</g>`;});
+ return `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet" role="img" aria-label="${d.title}">${ribbons}${labels}${nodes}</svg>`;
+}
+
+/* 生成深色主题卡片（跟随页面 var(--panel)/var(--line)，不再复刻截图白卡外壳） */
+function sankeyChart(key){
+ const d=SANKEY_DATA[key];if(!d)return "";
+ const p=SANKEY_STATE[key]||"y";
+ const opts=Object.keys(SK_LB).map(k=>`<option value="${k}" ${k===p?"selected":""}>${SK_LB[k]}</option>`).join("");
+ return `<div class="sk-card">
+  <div class="sk-hd"><b>${d.title}</b><span class="sk-sub">${d.sub||""}</span>
+   <div class="sk-tools"><span class="sk-dim">时间维度</span>
+   <select class="sk-sel" onchange="sankeySwitch('${key}',this.value)">${opts}</select>
+   <span class="sk-legend">单位：${d.unit} · 流带宽度表示流量大小 · 悬停查看明细</span></div></div>
+  <div class="sk-body" id="sk-body-${key}">${sankeySvg(key,p)}</div>
+  ${d.note?`<div class="sk-note">${d.note}</div>`:""}
+ </div>`;
+}
+/* 裸图模式（无卡片外壳，透明背景）：用于企业下钻弹窗等深色容器内嵌 */
+function sankeyBare(key,period){
+ const d=SANKEY_DATA[key];if(!d)return "";
+ return `<div class="sk-bare" id="sk-body-${key}">${sankeySvg(key,period||SANKEY_STATE[key]||"y")}</div>`;
+}
+function sankeySwitch(key,p){SANKEY_STATE[key]=p;const b=document.getElementById("sk-body-"+key);if(b)b.innerHTML=sankeySvg(key,p);}
+
+/* ============ 企业级桑基图：按企业差异化模拟 + 企业切换 + 画像下钻 ============ */
+const ENT_SK_STATE={en:{id:1},co:{id:1}};
+const ENT_SK_PERIOD={en:"y",co:"y"};
+/* 确定性伪随机（按企业 id 派生 0–1 小数），保证同一企业每次渲染数据一致 */
+function skSeed(cid,n){return ((cid*7+n*13)%97)/97;}
+/* 企业结构参数（按 id 确定性派生）：能源购入四类占比 + 能源损失率 + 碳排范围一/二结构 */
+function entStruct(cid){
+ const S=n=>skSeed(cid,n);
+ let pE=40+Math.round(S(1)*14),pG=18+Math.round(S(2)*8),pS=12+Math.round(S(3)*10);
+ pS=Math.min(pS,100-pE-pG-8);
+ return {pE:pE,pG:pG,pS:pS,pR:100-pE-pG-pS,
+  loss:15+Math.round(S(4)*9),
+  ind:52+Math.round(S(1)*14),   /* 范围二间接排放占比 52–66% */
+  pPow:74+Math.round(S(2)*10),  /* 间接排放中外购电力占比 */
+  pProc:28+Math.round(S(3)*18)  /* 范围一中工艺过程占比 */};
+}
+/* 按企业生成能流/碳流数据集：总量取企业真实台账值（c.en 万tce / c.co 万tCO₂），结构按企业特征差异化 */
+function entSankeyData(cid,mode){
+ const c=(typeof COMPANIES!=="undefined"?COMPANIES:[]).find(x=>x.id===cid)||{id:0,name:"示例企业",ind:"综合",eg:"B",en:2.0,co:4.0,red:20,meas:"—"};
+ const t=entStruct(c.id);
+ if(mode==="en"){
+  /* 能源购入结构：电力/燃气/蒸汽/绿电占比按企业差异化，损失率 15–24% */
+  const use=100-t.loss;
+  const v=x=>+(c.en*x/100).toFixed(2);
+  const links=[];
+  [[0,t.pE],[1,t.pG],[2,t.pS],[3,t.pR]].forEach(([i,p])=>{links.push([i,0,v(p*use/100)]);links.push([i,1,v(p*t.loss/100)]);});
+  return {title:"能流分析",sub:`${c.name} · ${c.ind} · 能效 ${c.eg} 级`,unit:"万tce",h:330,gapL:24,gapR:28,drill:c.id,drillTip:"点击下钻 "+c.name+" 企业画像",
+   left:[{name:"外购电力",color:"#9B6FC4",fill:"rgba(155,111,196,.45)"},{name:"天然气",color:"#F58F6E",fill:"rgba(245,143,110,.42)"},
+         {name:"外购蒸汽",color:"#5AA6DC",fill:"rgba(90,166,220,.42)"},{name:"绿电/可再生能源",color:"#2E9E63",fill:"rgba(46,158,99,.42)"}],
+   right:[{name:"有效利用",color:"#2F7FD1"},{name:"能源损失",color:"#F87171"}],
+   links:links,
+   note:`${c.name}综合能耗 ${c.en} 万tce，绿电及可再生能源占比 ${t.pR}%，能源损失率 ${t.loss}%（行业同期能效 ${c.eg} 级水平）；损失构成可下钻至空压站、管网散热、变配电损耗等重点环节。切换企业查看不同能源结构，点击图上任一节点或「下钻企业画像」查看该企业能碳画像、实时数据与减排措施。`};
+ }
+ /* 碳流：范围一直接排放（100-ind） / 范围二间接排放（ind）按企业差异化拆分 */
+ const v=x=>+(c.co*x/100).toFixed(2);
+ return {title:"碳流分析",sub:`${c.name} · ${c.ind} · 因子库计算`,unit:"万tCO₂",h:300,gapL:26,gapR:30,drill:c.id,drillTip:"点击下钻 "+c.name+" 企业画像",
+  left:[{name:"范围一 · 天然气燃烧",color:"#F87171",fill:"rgba(248,113,113,.42)"},{name:"范围一 · 工艺过程",color:"#FBBF24",fill:"rgba(251,191,36,.40)"},
+        {name:"范围二 · 外购电力",color:"#38BDF8",fill:"rgba(56,189,248,.42)"},{name:"范围二 · 外购热力",color:"#A78BFA",fill:"rgba(167,139,250,.42)"}],
+  right:[{name:"直接排放（范围一）",color:"#2E9E63"},{name:"间接排放（范围二）",color:"#2F7FD1"}],
+  links:[[0,0,v((100-t.pProc)*(100-t.ind)/100)],[1,0,v(t.pProc*(100-t.ind)/100)],
+         [2,1,v(t.pPow*t.ind/100)],[3,1,v((100-t.pPow)*t.ind/100)]],
+  note:`${c.name}碳排放 ${c.co} 万tCO₂，较基准年累计下降 ${c.red}%；直接排放 ${v(100-t.ind)} 万tCO₂、间接排放 ${v(t.ind)} 万tCO₂（外购电力为主），排放因子由系统统一版本管理。减排措施：${c.meas}。切换企业对比排放结构，点击图上任一节点或「下钻企业画像」查看明细。`};
+}
+/* 弹窗内嵌小桑基图：与所选企业共用同一套能源结构参数（电/热/气/绿电氢），透明背景裸图 */
+function entMiniSankey(cid){
+ const c=(typeof COMPANIES!=="undefined"?COMPANIES:[]).find(x=>x.id===cid)||{id:cid,name:"示例企业"};
+ const key="entmini_"+cid;
+ if(!SANKEY_DATA[key]){
+  const t=entStruct(cid);
+  SANKEY_DATA[key]={title:`${c.name} · 企业能流图`,sub:"",unit:"%",W:480,h:210,xL:8,xRm:182,gapL:20,gapR:16,showNV:false,
+   left:[{name:"电网接入",color:"#38BDF8",fill:"rgba(56,189,248,.35)"},{name:"热力管网",color:"#F87171",fill:"rgba(248,113,113,.35)"},
+         {name:"燃气门站",color:"#FBBF24",fill:"rgba(251,191,36,.32)"},{name:"绿电 / 制氢",color:"#2DD4BF",fill:"rgba(45,212,191,.35)"}],
+   right:[{name:c.name,color:"#2F7FD1"}],
+   links:[[0,0,t.pE],[1,0,t.pS],[2,0,t.pG],[3,0,t.pR]],note:""};
+ }
+ return sankeyBare(key);
+}
+/* 企业级桑基卡片：头部含企业名（可点击下钻）+ 企业切换 + 下钻按钮 + 时间维度 */
+function entSankeyChart(mode){
+ const cid=ENT_SK_STATE[mode].id,p=ENT_SK_PERIOD[mode]||"y";
+ const key=(mode==="co"?"entco_":"enten_")+cid;
+ if(!SANKEY_DATA[key])SANKEY_DATA[key]=entSankeyData(cid,mode);
+ const c=(typeof COMPANIES!=="undefined"?COMPANIES:[]).find(x=>x.id===cid)||{id:cid,name:"示例企业"};
+ const d=SANKEY_DATA[key];
+ const pOpts=Object.keys(SK_LB).map(k=>`<option value="${k}" ${k===p?"selected":""}>${SK_LB[k]}</option>`).join("");
+ const cOpts=(typeof COMPANIES!=="undefined"?COMPANIES:[]).map(x=>`<option value="${x.id}" ${x.id===cid?"selected":""}>${x.name}</option>`).join("");
+ return `<div id="ent-sk-${mode}"><div class="sk-card">
+  <div class="sk-hd"><b>${d.title}</b>
+   <span class="sk-co" onclick="coModal(${cid})" title="点击下钻企业画像">${c.name} · ${(d.sub||"").split("·").slice(1).join("·").trim()}</span>
+   <div class="sk-tools"><span class="sk-dim">切换企业</span>
+   <select class="sk-sel" onchange="entCoSwitch('${mode}',+this.value)">${cOpts}</select>
+   <button class="btn ghost sm" onclick="coModal(${cid})">下钻企业画像 →</button>
+   <span class="sk-dim">时间维度</span>
+   <select class="sk-sel" onchange="entSkPeriod('${mode}',this.value)">${pOpts}</select>
+   <span class="sk-legend">单位：${d.unit} · 流带宽度表示流量大小 · 悬停查看明细</span></div></div>
+  <div class="sk-body" id="sk-body-${key}">${sankeySvg(key,p)}</div>
+  ${d.note?`<div class="sk-note">${d.note}</div>`:""}
+ </div></div>`;
+}
+function entCoSwitch(mode,id){ENT_SK_STATE[mode].id=id;const box=document.getElementById("ent-sk-"+mode);if(box)box.innerHTML=entSankeyChart(mode);}
+function entSkPeriod(mode,p){ENT_SK_PERIOD[mode]=p;const key=(mode==="co"?"entco_":"enten_")+ENT_SK_STATE[mode].id;const b=document.getElementById("sk-body-"+key);if(b)b.innerHTML=sankeySvg(key,p);}
+
+/* ============ 驾驶舱能流/碳流卡：园区整体 ↔ 具体企业双维度 ============ */
+/* cid=0 时展示园区级归集图（dash_en/dash_co）；选择具体企业后切换为企业级差异化图并可下钻画像 */
+const DASH_FLOW={cid:0,period:"y"};
+function dashFlowKey(mode){return DASH_FLOW.cid===0?("dash_"+mode):("dashf_"+mode+"_"+DASH_FLOW.cid);}
+function dashFlowChart(mode){
+ const cid=DASH_FLOW.cid,p=DASH_FLOW.period,key=dashFlowKey(mode);
+ if(!SANKEY_DATA[key])SANKEY_DATA[key]=cid===0?SANKEY_DATA["dash_"+mode]:entSankeyData(cid,mode);
+ const d=SANKEY_DATA[key];
+ const c=cid===0?null:(typeof COMPANIES!=="undefined"?COMPANIES:[]).find(x=>x.id===cid)||{id:cid,name:"示例企业"};
+ const nameHtml=cid===0
+  ?`<span class="sk-co" style="cursor:default" title="园区整体为 8 家入驻企业数据归集；选择具体企业后可点击下钻画像">园区整体 · 8 家企业归集</span>`
+  :`<span class="sk-co" onclick="coModal(${cid})" title="点击下钻企业画像">${c.name} · ${(d.sub||"").split("·").slice(1).join("·").trim()}</span>`;
+ const cOpts=`<option value="0" ${cid===0?"selected":""}>园区整体（全部企业归集）</option>`+
+  (typeof COMPANIES!=="undefined"?COMPANIES:[]).map(x=>`<option value="${x.id}" ${x.id===cid?"selected":""}>${x.name}</option>`).join("");
+ const pOpts=Object.keys(SK_LB).map(k=>`<option value="${k}" ${k===p?"selected":""}>${SK_LB[k]}</option>`).join("");
+ const drillBtn=cid===0
+  ?`<span class="sk-legend">选择企业后可下钻画像</span>`
+  :`<button class="btn ghost sm" onclick="coModal(${cid})">下钻企业画像 →</button>`;
+ return `<div id="dash-flow"><div class="sk-card">
+  <div class="sk-hd"><b>${d.title}</b>${nameHtml}
+   <div class="sk-tools"><span class="sk-dim">切换对象</span>
+   <select class="sk-sel" onchange="dashFlowCo('${mode}',+this.value)">${cOpts}</select>
+   ${drillBtn}
+   <span class="sk-dim">时间维度</span>
+   <select class="sk-sel" onchange="dashFlowPeriod('${mode}',this.value)">${pOpts}</select>
+   <span class="sk-legend">单位：${d.unit} · 流带宽度表示流量大小 · 悬停查看明细</span></div></div>
+  <div class="sk-body" id="sk-body-${key}">${sankeySvg(key,p)}</div>
+  ${d.note?`<div class="sk-note">${d.note}</div>`:""}
+ </div></div>`;
+}
+function dashFlowCo(mode,cid){DASH_FLOW.cid=cid;const box=document.getElementById("dash-flow");if(box)box.innerHTML=dashFlowChart(mode);}
+function dashFlowPeriod(mode,p){DASH_FLOW.period=p;const key=dashFlowKey(mode);const b=document.getElementById("sk-body-"+key);if(b)b.innerHTML=sankeySvg(key,p);}
+window.sankeyChart=sankeyChart;window.sankeySvg=sankeySvg;window.sankeySwitch=sankeySwitch;window.sankeyBare=sankeyBare;window.SANKEY_DATA=SANKEY_DATA;window.entSankeyChart=entSankeyChart;window.entCoSwitch=entCoSwitch;window.entSkPeriod=entSkPeriod;window.entMiniSankey=entMiniSankey;window.entStruct=entStruct;window.dashFlowChart=dashFlowChart;window.dashFlowCo=dashFlowCo;window.dashFlowPeriod=dashFlowPeriod;
+
+/* ================= 页面注册 ================= */
+const PAGES={};
+function reg(id,fn){PAGES[id]={render:fn};}
+
+/* ---------- 驾驶舱  ---------- */
+reg("dashboard",()=>`
+<div class="kpis" style="grid-template-columns:repeat(6,1fr)">
+ ${kpi("综合能耗","18.6","万tce","同比下降 4.6%","down ok")}
+ ${kpi("碳排放总量","42.3","万tCO₂","同比下降 6.2%","down ok")}
+ ${kpi("单位能耗碳排放","2.53","tCO₂/tce","同比下降 8.0%","down ok")}
+ ${kpi("清洁能源消费占比","28.4","%","同比 +1.9pct","up ok")}
+ ${kpi("绿电消纳率","96.1","%","目标 95%","up ok")}
+ ${kpi("重点工程碳绩效","86","分","环比 +2","up ok")}
+</div>
+<div class="grid g3">
+ <div class="card"><h3>能碳结构·用能（上年度）</h3>
+  <div class="chart">${donut(Object.entries(PARK.energyMix).map(([k,v])=>({k,v,u:"%"})),140,20)}</div></div>
+ <div class="card"><h3>能碳结构·碳排（上年度）</h3>
+  <div class="chart">${donut(Object.entries(PARK.carbonMix).map(([k,v])=>({k,v,u:"%"})),140,20)}</div></div>
+ <div class="card"><h3>电力结构（年度）</h3>
+  <div class="chart">${donut(Object.entries(PARK.powerMix).map(([k,v])=>({k,v,u:"%"})),140,20)}</div></div>
+</div>
+<div class="grid g2">
+ <div class="card"><h3>能耗趋势（近五年）</h3>
+  <div class="chart">${comboBarLine(YEARS,"总能耗(万tce)",PARK.energy,"能耗强度",PARK.energyInt,225,560,"万tce")}</div>
+  <div class="concl"><b>趋势结论：</b>总能耗连续 4 年下降，能耗强度累计下降 21.8%，主要受装备制造电炉改造与数据中心液冷改造驱动。</div></div>
+ <div class="card"><h3>碳排趋势（近五年）</h3>
+  <div class="chart">${comboBarLine(YEARS,"碳排放(万tCO₂)",PARK.carbon,"碳排强度",PARK.carbonInt,225,560,"万t")}</div>
+  <div class="concl"><b>趋势结论：</b>碳排放强度降幅（24.2%）大于总量降幅（17.4%），园区进入强度与总量双降阶段。</div></div>
+</div>
+<div class="grid g2">
+ <div class="card"><h3>月度电量堆叠（本年度）</h3>
+  <div class="chart">${stackedBar(["1月","2月","3月","4月","5月","6月","7月","8月","9月","10月","11月","12月"],Object.entries(PARK.monthPower).map(([k,v],i)=>({name:k,color:PALETTE[i%8],data:v})),230,660)}</div></div>
+ <div class="card"><h3>重点工程清单 </h3>
+  <table><tr><th>工程名称</th><th>建设主体</th><th>投资(万元)</th><th>进度</th><th>碳评价</th></tr>
+  <tr onclick="projModal(1)" style="cursor:pointer"><td>园区绿电直供工程</td><td>绿洲光伏电力</td><td>12,400</td><td>82%</td><td><span class="tag lv1">A</span></td></tr>
+  <tr onclick="projModal(2)" style="cursor:pointer"><td>集中式光伏+储能二期</td><td>绿洲光伏电力</td><td>45,000</td><td>45%</td><td><span class="tag lv1">A</span></td></tr>
+  <tr onclick="projModal(3)" style="cursor:pointer"><td>园区综合能源站</td><td>管委会经发部</td><td>8,600</td><td>60%</td><td><span class="tag lv2">B</span></td></tr>
+  <tr onclick="projModal(4)" style="cursor:pointer"><td>企业能碳采集全覆盖（本项目）</td><td>中标方+8家企业</td><td>600</td><td>30%</td><td><span class="tag lv1">A</span></td></tr>
+  </table><div class="hint">点击表格行可查看工程详情弹窗</div></div>
+</div>
+`);
+
+const PROJS=[
+ {n:"园区绿电直供工程",inv:"12,400",share:"18%",unit:"绿洲光伏电力",cycle:"2024.06–2026.12",score:"86（A 级）",perf:"年供绿电 1.2 亿 kWh，园区减碳 6.9 万 tCO₂/年"},
+ {n:"集中式光伏+储能二期",inv:"45,000",share:"34%",unit:"绿洲光伏电力",cycle:"2025.03–2027.06",score:"90（A 级）",perf:"120MW 光伏 + 60MWh 储能，晚峰放电覆盖率 62%"},
+ {n:"园区综合能源站",inv:"8,600",share:"9%",unit:"管委会经发部",cycle:"2025.01–2026.03",score:"72（B 级）",perf:"蒸汽梯级利用，综合能源效率提升 11%"},
+ {n:"企业能碳采集全覆盖（本项目）",inv:"600",share:"—",unit:"中标方+8家企业",cycle:"合同签订–90 天交付",score:"88（A 级）",perf:"334 台套终端接入，数据采集准确率 ≥95%"},
+];
+function projModal(i){const p=PROJS[i-1];showModal("重点工程详情",`
+ <table>${row("工程名称",p.n,p.unit)}${row("投资规模",p.inv+" 万元","投资占比 "+p.share)}${row("负责单位",p.unit,"建设周期 "+p.cycle)}${row("项目碳评价",p.score,"")}</table>
+ <div class="concl"><b>碳绩效：</b>${p.perf}</div>`);}
+
+/* ---------- 地图 ---------- */
+function renderMap(mode){
+ return `<div class="map-wrap"><svg class="map-svg" viewBox="0 0 1000 560">
+  <polygon points="120,80 900,60 950,300 820,520 300,540 90,420" fill="#0E2138" stroke="#2E8BC0" stroke-width="2"/>
+  <path d="M120 260 H 930" stroke="#1E3A5C" stroke-width="8"/>
+  <path d="M480 62 V 535" stroke="#1E3A5C" stroke-width="8"/>
+  <text x="500" y="270" fill="#3E5C82" font-size="12">京河大道</text>
+  <text x="140" y="250" fill="#3E5C82" font-size="12">如意街</text>
+  <rect x="620" y="330" width="90" height="40" fill="#12294A" stroke="#2E4C77"/><text x="630" y="355" fill="#5D7A9C" font-size="11">智慧产业研发大厦</text>
+  <rect x="150" y="90" width="110" height="34" fill="#12294A" stroke="#2E4C77"/><text x="160" y="112" fill="#5D7A9C" font-size="11">集中式光伏区</text>
+  <g id="mapDots"></g>
+ </svg></div><div id="mapLegend" class="legend" style="margin-top:8px"></div>`;
+}
+function dotColor(v,mx){const t=v/mx;if(t<0.34)return "#4ADE80";if(t<0.67)return "#FBBF24";return "#F87171";}
+function renderMapDots(mode,query){
+ const g=document.getElementById("mapDots");if(!g)return;
+ const key=mode==="onemap"?OM.factor:"en";
+ const val=c=>{const idx=YEARS.indexOf(OM.year);
+  if(key==="co")return c.co5[idx];if(key==="cl")return c.asset/300;if(key==="gl")return c.asset/500;return c.en5[idx];};
+ let list=COMPANIES;if(query)list=list.filter(c=>c.name.includes(query));
+ const mx=Math.max(...list.map(val));
+ const unit={en:" 万tce",co:" 万tCO₂",cl:" 电力",gl:" 分"}[key]||"";
+ g.innerHTML=list.map(c=>`<g class="map-point" onclick="coModal(${c.id})" transform="translate(${c.x},${c.y})">
+   <circle class="dot" r="7" fill="${dotColor(val(c),mx)}" stroke="#fff" stroke-width="1.5"><title>${c.name}：${(Math.round(val(c)*10)/10)}${unit}</title></circle>
+   <text class="dot-label" x="11" y="4">${c.name}（${c.eg} 级能效）</text></g>`).join("");
+ const lg=document.getElementById("mapLegend");
+ if(lg)lg.innerHTML=`<span><i style="background:#4ADE80"></i>低</span><span><i style="background:#FBBF24"></i>中</span><span><i style="background:#F87171"></i>高</span><span>当前要素值单位：${unit||"—"}</span>`;
+}
+function coModal(id){
+ const c=COMPANIES.find(x=>x.id===id);
+ showModal("企业画像下钻",`
+  <div class="kpis" style="grid-template-columns:repeat(4,1fr)">
+   ${kpi(c.name,c.ind,"","碳评价 "+c.grade+" 级")}
+   ${kpi("2025 能耗",c.en.toFixed(1),"万tce","累计 -"+c.red+"%")}
+   ${kpi("2025 碳排",c.co.toFixed(1),"万tCO₂","累计 -"+c.red+"%")}
+   ${kpi("能效等级",c.eg,"级",c.eg==="A"?"行业先进":c.eg==="B"?"行业平均":"待提升")}
+  </div>
+  <div class="sub2">近五年能耗 / 碳排趋势</div>
+  ${lineChart(YEARS.map(String),[{name:"能耗(万tce)",color:"#2E8BC0",data:c.en5.map(v=>+v.toFixed(2))},{name:"碳排(万tCO₂)",color:"#2DD4BF",data:c.co5.map(v=>+v.toFixed(2))}],220,700)}
+  <div class="concl"><b>能碳分析：</b>${c.name}近五年能耗与碳排累计下降 ${c.red}%，强度下降快于总量，${c.eg==="A"?"已达行业先进水平，建议输出为园区标杆案例。":c.eg==="B"?"处于行业平均水平，建议开展 AI 节能诊断挖掘改造空间。":"能效偏低，建议列入重点帮扶清单并纳入告警阈值动态管理。"}</div>
+  <div class="concl"><b>减排措施：</b>${c.meas}</div>`);
+}
+
+/* ---------- 一张图  ---------- */
+const OM={year:2025,factor:"en",playing:null};
+reg("oneMap",()=>`
+<div class="grid g4">
+ <div class="card"><h3>能源消费要素</h3>
+  <table>${row("电力","7.3 亿kWh","占比 48%")}${row("燃气","620 万m³","占比 22%")}${row("热力","28 万GJ","占比 18%")}${row("氢气","120 t","示范期")}</table></div>
+ <div class="card"><h3>能碳指标要素 </h3>
+  <table id="omKpi"></table></div>
+ <div class="card"><h3>清洁能源要素</h3>
+  <table>${row("分布式光伏","86 个 / 42MW","在运")}${row("储能","3 站 / 60MWh","在运")}${row("充电桩","126 个","快充 48")}${row("绿电交易","2.1 亿kWh","本年")}</table></div>
+ <div class="card"><h3>绿色低碳成就</h3>
+  <table>${row("国家级绿色园区","1 个","2024 年获批")}${row("省级绿色工厂","3 家","银北/云谷/绿洲")}${row("零碳工厂试点","2 家","电通/云谷")}${row("国家级绿色工厂","1 家","申报中")}</table></div>
+</div>
+<div class="card"><h3>瓦片地图（要素联动）</h3>
+ <div style="display:flex;gap:10px;margin-bottom:10px;flex-wrap:wrap;align-items:center">
+  <select id="omFactor">
+   <option value="en">能源消费</option><option value="co">碳排放</option><option value="cl">清洁能源</option><option value="gl">绿色低碳成就</option>
+  </select>
+  <input type="text" id="omSearch" placeholder="按企业名称筛选" style="width:220px">
+  <button class="btn ghost sm" onclick="omRefresh()">查询</button>
+  <span style="margin-left:auto;font-size:12px;color:var(--txt2)">当前要素：<b id="omFactorName" style="color:var(--cyan)">能源消费</b></span>
+ </div>
+ ${renderMap("onemap")}
+ <div class="yearbar">
+  <button class="btn sm" id="omPlay" onclick="omTogglePlay()">▶ 播放</button>
+  <input type="range" min="2021" max="2025" step="1" value="2025" id="omYear" oninput="omSetYear(this.value)">
+  <span class="y" id="omYearLabel">2025</span>
+  <span style="font-size:11px;color:var(--txt3)">年份进度条：自动播放 / 手动选择，联动地图与指标</span>
+ </div></div>
+<div class="card"><h3>企业数据排序（当前要素）</h3><div id="omRank"></div></div>
+`);
+
+function omSetYear(y){OM.year=+y;const el=document.getElementById("omYearLabel");if(el)el.textContent=y;omRefresh();}
+function omTogglePlay(){
+ if(OM.playing){clearInterval(OM.playing);OM.playing=null;const b=document.getElementById("omPlay");if(b)b.textContent="▶ 播放";return;}
+ const b=document.getElementById("omPlay");if(b)b.textContent="⏸ 暂停";
+ let y=OM.year>=2025?2021:OM.year;
+ OM.playing=setInterval(()=>{omSetYear(y);y++;if(y>2025){clearInterval(OM.playing);OM.playing=null;const bb=document.getElementById("omPlay");if(bb)bb.textContent="▶ 播放";}},1100);
+}
+function omRefresh(){
+ const sel=document.getElementById("omFactor");if(sel)OM.factor=sel.value;
+ const nm={en:"能源消费",co:"碳排放",cl:"清洁能源",gl:"绿色低碳成就"}[OM.factor];
+ const el=document.getElementById("omFactorName");if(el)el.textContent=nm;
+ renderMapDots("onemap",(document.getElementById("omSearch")||{}).value||"");
+ const idx=YEARS.indexOf(OM.year);
+ const kpiT=document.getElementById("omKpi");
+ if(kpiT)kpiT.innerHTML=
+  row("综合能耗量",(PARK.energy[idx]||18.6).toFixed(1),"万tce")+
+  row("碳排放总量",(PARK.carbon[idx]||42.3).toFixed(1),"万tCO₂")+
+  row("单位能耗碳排放",(PARK.carbonInt[idx]||2.53).toFixed(2),"tCO₂/tce")+
+  row("消纳率","96.1","%");
+ const key=OM.factor==="co"?"co5":OM.factor==="en"?"en5":null;
+ let items=COMPANIES.map(c=>({k:c.name,v:key?+c[key][idx].toFixed(1):(OM.factor==="cl"?Math.round(c.asset/300):Math.round(c.asset/500))}));
+ const q=(document.getElementById("omSearch")||{}).value;
+ if(q)items=items.filter(i=>i.k.includes(q.trim()));
+ items.sort((a,b)=>b.v-a.v);
+ const box=document.getElementById("omRank");
+ if(box)box.innerHTML=hBar(items.slice(0,8),240,660,OM.factor==="co"?" 万tCO₂":OM.factor==="en"?" 万tce":OM.factor==="cl"?" 万kWh":" 分",(it,i)=>PALETTE[i%8]);
+}
+
+/* ---------- 多维分析  ---------- */
+reg("multi",()=>`
+<div class="tabs" id="multiTabs">
+ <div class="tab on" data-t="m1">能碳趋势分析</div>
+ <div class="tab" data-t="m2">能碳结构分析</div>
+ <div class="tab" data-t="m3">核算范围分析</div>
+ <div class="tab" data-t="m4">企业数据排序分析</div>
+ <div class="tab" data-t="m5">能碳对标分析</div>
+</div>
+<div class="card"><div id="tabBody"></div></div>`);
+const RENDERERS={};
+RENDERERS.m1=()=>`<div class="grid g2">
+ <div><div class="sub2">区域能耗、碳排趋势  </div>
+  ${lineChart(YEARS.map(String),[{name:"能耗(万tce)",color:"#2E8BC0",data:PARK.energy},{name:"碳排(万tCO₂)",color:"#2DD4BF",data:PARK.carbon},{name:"碳排强度×10",color:"#FBBF24",data:PARK.carbonInt.map(v=>+ (v*10).toFixed(1))}],235,560)}
+  <select style="margin-top:8px" onchange="multiSel(this)"><option>区域维度</option><option>产业维度</option><option>企业维度</option></select>
+  <div class="concl" id="m1c"><b>趋势结论：</b>区域能耗与碳排呈「双降」，能源结构中电力占比稳定在 48%，燃气替代油品贡献主要减排；碳排降幅大于能耗降幅，源于绿电占比提升 3.5pct。</div></div>
+ <div><div class="sub2">产业维度趋势 </div>
+  ${stackedBar(YEARS.map(String),[{name:"新材料",color:"#2E8BC0",data:[8.2,7.9,7.5,7.0,6.6]},{name:"装备制造",color:"#2DD4BF",data:[4.8,4.7,4.5,4.3,4.1]},{name:"食品加工",color:"#FBBF24",data:[3.1,3.0,2.9,2.7,2.6]},{name:"数据服务",color:"#A78BFA",data:[4.1,4.0,3.9,3.8,3.6]},{name:"其他",color:"#3E5C82",data:[1.6,1.6,1.6,1.7,1.7]}],235,560)}
+  <div class="concl"><b>原因分析：</b>新材料产业降幅最大（-19.5%），系余热回收投产；数据服务 2025 年降幅扩大至 5.3%，液冷改造贡献显著。</div></div>
+</div>`;
+RENDERERS.m2=()=>`<div class="grid g2">
+ <div><div class="sub2">能源结构：能耗量 / 碳排量及同比 </div>
+  <table><tr><th>能源类型</th><th>能耗(万tce)</th><th>同比</th><th>碳排(万tCO₂)</th><th>同比</th></tr>
+  <tr><td>电力</td><td>8.9</td><td class="down">-3.2%</td><td>22.0</td><td class="down">-5.1%</td></tr>
+  <tr><td>燃气</td><td>4.1</td><td class="down">-1.8%</td><td>8.0</td><td class="down">-2.0%</td></tr>
+  <tr><td>热力</td><td>3.3</td><td class="down">-6.9%</td><td>6.8</td><td class="down">-6.9%</td></tr>
+  <tr><td>油品</td><td>1.5</td><td class="down">-8.1%</td><td>3.8</td><td class="bad">+1.2%</td></tr>
+  <tr><td>煤品</td><td>0.8</td><td class="down">-12.0%</td><td>1.7</td><td class="down">-12.0%</td></tr></table>
+  <div class="concl"><b>分析：</b>油品碳排逆势上升，集中于精细化工运输环节，建议纳入下年度告警阈值管理。</div></div>
+ <div><div class="sub2">电能结构细分</div>
+  ${donut([{k:"外购火电",v:46},{k:"外购绿电",v:22},{k:"分布式光伏",v:18},{k:"集中式新能源",v:14}].map(d=>({...d,u:"%"})),170,24)}
+ </div>`;
+RENDERERS.m3=()=>`<div class="grid g2">
+ <div><div class="sub2">范围一 / 范围二趋势 </div>
+  ${lineChart(YEARS.map(String),[{name:"范围一 直接排放",color:"#F87171",data:[22.0,21.5,20.4,18.8,16.9]},{name:"范围二 间接排放",color:"#2E8BC0",data:[29.2,28.1,27.1,26.3,25.4]}],240,560)}
+  <div class="concl"><b>趋势结论：</b>范围一降幅（23.2%）显著大于范围二（13.0%），直接排放治理成效突出；范围二下降依赖绿电结构，弹性更大。</div></div>
+ <div><div class="sub2">范围构成占比</div>
+  ${donut([{k:"范围一：燃料燃烧+工艺排放",v:16.9,u:" 万t"},{k:"范围二：外购电力+热力",v:25.4,u:" 万t"}],170,26)}
+ </div>`;
+RENDERERS.m4=()=>`<div class="grid g2">
+ <div><div class="sub2">企业碳排放排序</div>
+  <div class="chart">${hBar(COMPANIES.map(c=>({k:c.name,v:c.co})).sort((a,b)=>b.v-a.v),240,560," 万tCO₂",(it,i)=>PALETTE[i%8])}</div></div>
+ <div><div class="sub2">碳资产 / 减碳量排序 </div>
+  <div class="chart">${hBar(COMPANIES.map(c=>({k:c.name,v:c.asset})).sort((a,b)=>b.v-a.v),150,560," 万元",(it,i)=>"#2DD4BF")}</div>
+  <div class="concl"><b>结论分析：</b>减碳量按同产品类别对标排序，新材料与数据服务企业减碳强度领先；黄河生物医药减碳率仅 10%，建议列入重点帮扶清单。</div></div>
+</div>`;
+RENDERERS.m5=()=>`<div class="grid g2">
+ <div><div class="sub2">单位能耗碳排放对标（区域/产业/企业三层级）</div>
+  ${lineChart(YEARS.map(String),[{name:"园区",color:"#38BDF8",data:[2.98,2.83,2.71,2.60,2.53]},{name:"新材料产业",color:"#2DD4BF",data:[2.33,2.31,2.31,2.32,2.31]},{name:"标杆企业(云谷)",color:"#4ADE80",data:[1.89,1.86,1.85,1.81,1.79]},{name:"国标先进值",color:"#FBBF24",data:[1.8,1.8,1.8,1.8,1.8]}],240,560)}
+  <div class="concl"><b>对标结论：</b>园区距国标先进值仍有 29% 差距；新材料产业接近先进水平，化工与食品产业为主要差距来源。</div></div>
+ <div><div class="sub2">区域指标对标（国/省/市/区域四级）</div>
+  <table><tr><th>指标</th><th>园区</th><th>银川市</th><th>自治区</th><th>全国</th><th>评价</th></tr>
+  <tr><td>能耗强度(tce/万元)</td><td>1.11</td><td>1.24</td><td>1.38</td><td>1.05</td><td><span class="tag lv2">中上</span></td></tr>
+  <tr><td>碳排放强度(tCO₂/万元)</td><td>2.53</td><td>2.81</td><td>3.12</td><td>2.20</td><td><span class="tag lv2">中上</span></td></tr>
+  <tr><td>单位能耗碳排放(tCO₂/tce)</td><td>2.53</td><td>2.65</td><td>2.72</td><td>2.40</td><td><span class="tag lv2">中上</span></td></tr></table>
+ </div>`;
+function multiSel(sel){
+ const box=document.getElementById("m1c");if(!box)return;
+ if(sel.selectedIndex===1)box.innerHTML="<b>趋势结论（产业维度）：</b>新材料、数据服务产业能耗碳排双降且降幅扩大；食品加工产业受产能恢复影响 2025 年降幅收窄至 4.2%。";
+ else if(sel.selectedIndex===2)box.innerHTML="<b>趋势结论（企业维度）：</b>选中企业（银北新材料）近五年能耗 -17.9%、碳排 -18.7%，变化率曲线显示 2024 年起进入加速下降通道。";
+ else box.innerHTML="<b>趋势结论：</b>所选年份区域能耗与碳排呈「双降」，能源结构中电力占比稳定在 48%。";
+}
+
+/* ---------- 告警  ---------- */
+let alarmType="all";
+reg("alarm",()=>`
+<div class="kpis" style="grid-template-columns:repeat(4,1fr)">
+ ${kpi("年度告警总数","126","条","上月 14 / 当日 2")}
+ ${kpi("紧急告警","9","条","待处理 2","bad")}
+ ${kpi("重要告警","34","条","处理中 2")}
+ ${kpi("次要告警","83","条","闭环率 91%","up ok")}
+</div>
+<div class="grid g3">
+ <div class="card"><h3>告警等级分布</h3>${donut([{k:"紧急",v:9},{k:"重要",v:34},{k:"次要",v:83}],150,22)}</div>
+ <div class="card"><h3>产业告警占比</h3>${donut([{k:"精细化工",v:31},{k:"新材料",v:24},{k:"装备制造",v:22},{k:"食品加工",v:19},{k:"其他",v:30}],150,22)}</div>
+ <div class="card"><h3>企业告警排序</h3>${hBar(COMPANIES.map(c=>({k:c.name,v:Math.round(c.co*2+4)})).sort((a,b)=>b.v-a.v).slice(0,5),150,500," 条",(it,i)=>"#FBBF24")}</div>
+</div>
+<div class="card"><h3>告警趋势（次要 / 重要 / 紧急）</h3>
+ ${lineChart(["1月","2月","3月","4月","5月","6月","7月","8月","9月","10月"],[
+  {name:"次要",color:"#38BDF8",data:[9,8,10,7,8,9,11,10,6,5]},
+  {name:"重要",color:"#FBBF24",data:[3,4,3,5,4,3,4,4,2,2]},
+  {name:"紧急",color:"#F87171",data:[1,1,2,1,0,1,2,1,0,0]}],230,980)}
+</div>
+<div class="card"><h3>告警信息列表</h3>
+ <div style="display:flex;gap:8px;margin-bottom:10px;align-items:center">
+  <select onchange="alarmType=this.value;renderAlarmTable()">
+   <option value="all">全部类型</option><option value="单位能耗碳排放">单位能耗碳排放告警</option><option value="能耗">能耗告警</option><option value="碳排">碳排告警</option>
+  </select>
+  <span class="hint" style="margin:0">支持年度 / 月度统计周期切换</span>
+ </div>
+ <div id="alarmTable"></div></div>
+`);
+
+function renderAlarmTable(){
+ const box=document.getElementById("alarmTable");if(!box)return;
+ const list=ALARMS.filter(a=>alarmType==="all"||a.type===alarmType);
+ const lvName={1:'<span class="tag lv1">次要</span>',2:'<span class="tag lv2">重要</span>',3:'<span class="tag lv3">紧急</span>'};
+ box.innerHTML=`<table><tr><th>时间</th><th>企业</th><th>类型</th><th>等级</th><th>内容</th><th>状态</th></tr>
+ ${list.map(a=>`<tr><td style="font-family:Consolas">${a.t}</td><td>${a.co}</td><td>${a.type}</td><td>${lvName[a.lv]}</td><td>${a.msg}</td><td>${a.st==="待处理"?'<span class="tag lv3">待处理</span>':a.st==="处理中"?'<span class="tag lv2">处理中</span>':'<span class="tag lv1">已闭环</span>'}</td></tr>`).join("")}</table>`;
+}
+
+/* ---------- 碳考核  ---------- */
+reg("assess",()=>`
+<div class="card"><h3>碳考核评价展示 </h3>
+ <table><tr><th>指标体系</th><th>核心指标</th><th>单位</th><th>2025 目标</th><th>实际值</th><th>完成度</th><th>二级指标趋势</th></tr>
+ ${ASSESS.map((a,i)=>{
+  const rate=Math.min(a.actual/a.target*100,a.target/a.actual*100);
+  return `<tr><td style="color:${lc("#8FA8C4","#5A7089")}">${a.ind}</td><td>${a.name}</td><td>${a.unit}</td><td>${a.target}</td><td style="color:${lc("#fff","#0B4E8F")};font-family:Consolas">${a.actual}</td>
+  <td style="width:150px"><div class="progress ${a.ok?"":"warn"}"><i style="width:${Math.min(rate,100).toFixed(0)}%"></i></div></td>
+  <td><span style="cursor:pointer;color:var(--cyan);text-decoration:underline dotted" onclick="assessTrend(${i})">近五年趋势 ↗</span></td></tr>`;}).join("")}
+ </table><div class="hint">基于国家级零碳园区建设指标体系（试行）+ 碳达峰碳中和综合评价考核指标体系；二级指标支持近五年数据趋势展示（点击查看）</div></div>
+<div class="grid g2">
+ <div class="card"><h3>区域绩效管理：年度目标值配置</h3>
+  <table><tr><th>指标</th><th>年度</th><th>目标值</th><th>操作</th></tr>
+  ${ASSESS.slice(0,3).map(a=>`<tr><td>${a.name}</td><td>2026</td><td><input type="text" value="${(a.target*0.92).toFixed(2)}" style="width:90px"></td><td><button class="btn sm" onclick="alert('演示：目标值已保存')">保存</button></td></tr>`).join("")}
+  </table><div class="hint">支持按年度配置两套指标体系下的核心数据目标值</div></div>
+ <div class="card"><h3>区域低碳指标：实际值填报</h3>
+  <table><tr><th>指标</th><th>年度</th><th>实际值</th><th>状态</th></tr>
+  ${ASSESS.slice(0,3).map(a=>`<tr><td>${a.name}</td><td>2025</td><td>${a.actual}</td><td>${a.ok?'<span class="tag lv1">达标</span>':'<span class="tag lv2">未达标</span>'}</td></tr>`).join("")}
+  </table><div class="hint">支持按年度填报核心数据实际值，未达标项自动关联能碳告警</div></div>
+</div>
+`);
+
+function assessTrend(i){
+ const a=ASSESS[i];
+ const lowerBetter=a.name==="单位能耗碳排放";
+ const rate=Math.min(a.actual/a.target*100,a.target/a.actual*100);
+ const yrs=YEARS.map(String);
+ const rows=a.trend.map((v,y)=>{
+  const prev=y>0?a.trend[y-1]:null;
+  const yoy=prev===null?"—":(v>=prev?"+":"")+((v-prev)/prev*100).toFixed(1)+"%";
+  const okY=lowerBetter?v<=a.target:v>=a.target;
+  const cls=y===a.trend.length-1?' style="color:'+lc("#fff","#0B4E8F")+'"':"";
+  return `<tr${cls}><td>${yrs[y]}${y===a.trend.length-1?' <span class="tag lv2">本年</span>':""}</td>
+   <td style="font-family:Consolas">${v}</td><td>${yoy}</td>
+   <td>${okY?'<span class="tag lv1">达标 ✔</span>':'<span class="tag lv2">未达标</span>'}</td></tr>`;}).join("");
+ const cum=a.trend.length>1?((a.trend[a.trend.length-1]-a.trend[0])/a.trend[0]*100):0;
+ const dir=cum<=0?"累计下降":"累计上升";
+ const concl=lowerBetter
+  ?`${a.name}五年${dir} ${Math.abs(cum).toFixed(1)}%，强度改善快于总量，${a.ok?"已达成年度考核目标，建议保持绿电替代与节能改造节奏。":"尚未达成年度目标（目标 "+a.target+" "+a.unit+"），建议将绿电直供扩容与企业电炉改造纳入零碳路径重点措施清单（联动 目标值管理）。"}`
+  :`${a.name}五年${dir} ${Math.abs(cum).toFixed(1)}个百分点量级，${a.ok?"已达成年度考核目标且趋势持续向好，可作为园区绿色低碳成效的展示亮点。":"尚未达成年度目标（目标 "+a.target+" "+a.unit+"），建议按季度跟踪进度并自动关联能碳告警（未达标项联动告警）。"}`;
+ showModal(a.name+" · 历年情况与趋势（核心指标区 · ）",`
+  <div class="kpis" style="grid-template-columns:repeat(4,1fr)">
+   ${kpi("2025 实际值",a.actual,a.unit,"指标体系："+a.ind,"")}
+   ${kpi("2025 目标值",a.target,a.unit,lowerBetter?"越低越好":"越高越好","")}
+   ${kpi("完成度",rate.toFixed(1),"%",a.target+" → "+a.actual,"")}
+   ${kpi("达标状态",a.ok?"达标":"未达标","",a.ok?"达成年度考核目标":"未达成年度考核目标",a.ok?"up ok":"down")}
+  </div>
+  <div class="sub2">历年情况（2021–2025 · 本年行加亮）</div>
+  <table><tr><th>年份</th><th>指标值（${a.unit}）</th><th>同比变化</th><th>当年达标情况</th></tr>${rows}</table>
+  <div class="sub2">五年趋势（含目标线对照）</div>
+  ${lineChart(yrs,[{name:a.name,color:"#38BDF8",data:a.trend},{name:"目标线 "+a.target,color:"#F87171",data:a.trend.map(()=>a.target)}],220,600)}
+  <div class="concl"><b>趋势结论：</b>${concl}</div>`);
+}
+
+/* ---------- 零碳路径  ---------- */
+reg("path",()=>`
+<div class="grid g2" style="grid-template-columns:2fr 1fr">
+ <div class="card"><h3>零碳预测：三情景碳排放路径</h3>
+  ${lineChart(PATHS.years,[{name:"基准情景",color:"#3E5C82",data:PATHS.base},{name:"低碳情景",color:"#2E8BC0",data:PATHS.low},{name:"零碳情景",color:"#2DD4BF",data:PATHS.zero}],260,640)}
+  <div class="legend">
+   <span><i style="background:#3E5C82"></i>基准情景 · 达峰 <b style="color:${lc("#fff","#0B4E8F")}">2030</b> 年</span>
+   <span><i style="background:#2E8BC0"></i>低碳情景 · 达峰 <b style="color:${lc("#fff","#0B4E8F")}">2027</b> 年</span>
+   <span><i style="background:#2DD4BF"></i>零碳情景 · 当前已运行于达峰后通道</span>
+  </div>
+  <div class="concl"><b>碳达峰标识：</b>基准情景峰值 46.5 万 tCO₂（2030 年）；低碳情景提前 3 年达峰；零碳情景 2035 年碳排放降至 9.0 万 tCO₂，需绿电占比 ≥60% 配合 CCER 抵消。</div></div>
+ <div class="card"><h3>零碳效益分析（单年度）</h3>
+  <table><tr><th>碳达峰措施</th><th>减排量(万t)</th><th>年净收益(万元)</th></tr>
+  <tr><td>绿电直供扩容</td><td>4.2</td><td>1,180</td></tr>
+  <tr><td>企业节能改造（AI诊断）</td><td>1.6</td><td>640</td></tr>
+  <tr><td>综合能源站梯级利用</td><td>0.9</td><td>310</td></tr>
+  <tr><td>储能晚峰放电</td><td>0.4</td><td>210</td></tr>
+  <tr><td style="color:${lc("#fff","#0B4E8F")}">合计</td><td style="color:#2DD4BF">7.1</td><td style="color:#2DD4BF">2,340</td></tr></table></div>
+</div>
+<div class="card"><h3>管理配置（模型 / 情景 / 参数 / 变量）</h3>
+ <div class="tabs">
+  <div class="tab on" data-t="p1">模型管理</div><div class="tab" data-t="p2">情景模拟</div><div class="tab" data-t="p3">参数管理</div><div class="tab" data-t="p4">变量管理</div>
+ </div>
+ <div class="tabpane on" id="tp-p1">
+  <table><tr><th>模型名称</th><th>类型</th><th>更新时间</th><th>操作</th></tr>
+  <tr><td>园区宏观碳达峰模型（LEAP）</td><td>基准模型</td><td>2025-10-12</td><td><button class="btn ghost sm" onclick="alert('演示：新增碳达峰模型')">新增</button> <button class="btn ghost sm">修改</button> <button class="btn ghost sm" style="color:var(--red)">删除</button></td></tr>
+  <tr><td>重点行业减排技术模型</td><td>低碳模型</td><td>2025-09-28</td><td><button class="btn ghost sm">修改</button> <button class="btn ghost sm" style="color:var(--red)">删除</button></td></tr></table></div>
+ <div class="tabpane" id="tp-p2"><div class="hint">支持模型下的情景配置与管理：基准 / 低碳 / 零碳情景的启用、复制、对比推演（勾选后重新计算上图路径）</div></div>
+ <div class="tabpane" id="tp-p3"><div class="hint">模型参数配置与管理：GDP 增速、能耗强度下降率、绿电替代率、减排技术渗透率等</div></div>
+ <div class="tabpane" id="tp-p4"><div class="hint">模型变量配置与管理：自变量 / 因变量映射、单位、数据来源绑定</div></div>
+</div>
+`);
+
+/* ---------- 碳排报告  ---------- */
+let rptKey="y";
+reg("report",()=>`
+<div class="card">
+ <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap">
+  <h3 style="margin:0">碳排放报告 </h3>
+  <div style="margin-left:auto;display:flex;gap:8px">
+   <select id="rptCycle" onchange="rptSwitch(this.value)"><option value="y">年度</option><option value="q">季度</option><option value="m">月度</option></select>
+   <button class="btn" onclick="alert('演示：生成并下载 PDF 报告（对应演示评分项「可创建并下载 PDF 或 Word 报告」）')">生成 PDF</button>
+   <button class="btn ghost" onclick="alert('演示：生成并下载 Word 报告')">生成 Word</button>
+  </div>
+ </div>
+ <div class="kpis" style="grid-template-columns:repeat(7,1fr)" id="rptKpi"></div>
+ <div class="grid g2">
+  <div><div class="sub2">碳排放趋势分析</div><div id="rptTrend"></div></div>
+  <div><div class="sub2">核算范围分析</div>${donut([{k:"范围一：燃料燃烧",v:11.2},{k:"范围一：工艺排放",v:5.7},{k:"范围二：外购电力",v:18.6},{k:"范围二：外购热力",v:6.8}],160,24)}</div>
+  <div><div class="sub2">行业碳排放构成</div>${hBar([{k:"新材料",v:10.6},{k:"装备制造",v:8.2},{k:"精细化工",v:8.1},{k:"数据服务",v:7.0},{k:"食品加工",v:5.4},{k:"其他",v:3.0}],170,560," 万tCO₂",(it,i)=>PALETTE[i%8])}</div>
+  <div><div class="sub2">碳达峰推演</div>
+   <table><tr><th>情景</th><th>达峰时间</th><th>达峰值(万tCO₂)</th></tr>
+   <tr><td>低碳情景</td><td>2027 年</td><td>42.3</td></tr>
+   <tr><td>基准情景</td><td>2030 年</td><td>46.5</td></tr>
+   <tr><td>零碳情景</td><td>2025（已过峰）</td><td>42.3</td></tr></table>
+   <div class="sub2" style="margin-top:10px">能碳告警</div>
+   <div style="display:flex;gap:10px;align-items:center"><span class="tag lv3">紧急 9</span><span class="tag lv2">重要 34</span><span class="tag lv1">次要 83</span><span class="hint" style="margin:0">按年度/季度/月度展示告警占比</span></div>
+  </div>
+ </div>
+ <div class="card" style="background:rgba(0,91,172,.08);margin-top:14px"><h3>结论与建议</h3>
+  <p style="line-height:2;font-size:13px"><b style="color:#4ADE80">主要成效：</b>碳排放总量同比下降 6.2%，能耗强度累计下降 21.8%，绿电消纳率 96.1% 达标，6 项考核指标中 4 项达标。</p>
+  <p style="line-height:2;font-size:13px"><b style="color:#FBBF24">存在问题与风险：</b>①单位能耗碳排放 2.53 tCO₂/tce 未达 2.40 目标；②精细化工油品碳排同比上升 1.2%；③黄河生物医药碳配额存在盈缺风险，触发超排放预警。</p>
+  <p style="line-height:2;font-size:13px"><b style="color:#38BDF8">重点工作建议：</b>①将兴庆精细化工精馏改造列入 2026 重点工程；②扩大绿电直供覆盖企业至 12 家；③对 2 家配额缺口企业提前启动 CCER 购置预案；④食品加工产业纳入告警阈值动态管理。</p>
+ </div>
+</div>
+`);
+
+function rptSwitch(k){rptKey=k;renderReport();}
+function renderReport(){
+ const r=REPORTS[rptKey];const box=document.getElementById("rptKpi");if(!box)return;
+ const names=["碳排放量(万t)","单位GDP碳排(t/万元)","单位GDP能耗(tce/万元)","清洁能源消费(%)","消纳率(%)","控排企业数","履约率(%)"];
+ box.innerHTML=r.core.map((v,i)=>kpi(names[i],v,"","同比改善",i<3?"down ok":"up ok")).join("");
+ const tr=document.getElementById("rptTrend");
+ if(tr)tr.innerHTML=comboBarLine(r.labels,"碳排量(万t)",r.carbon,"环比(%)",r.carbon.map((v,i)=>i?+(((v-r.carbon[i-1])/r.carbon[i-1])*100).toFixed(1):0),210,560,"万t","%");
+}
+
+/* ---------- 企业端 ---------- */
+let curCo=COMPANIES[1];
+reg("entHome",()=>{const c=curCo;return `
+<div class="kpis" style="grid-template-columns:repeat(6,1fr)">
+ ${kpi("综合能耗",c.en.toFixed(1),"万tce","同比 -4.8%","down ok")}
+ ${kpi("碳排放",c.co.toFixed(1),"万tCO₂","同比 -5.2%","down ok")}
+ ${kpi("单位能耗碳排放",(c.co/c.en).toFixed(2),"tCO₂/tce","零碳工厂核心指标①")}
+ ${kpi("非化石能源消费占比","34.5","%","目标 40%")}
+ ${kpi("非化石电力物理认定占比","41.2","%","目标 45%")}
+ ${kpi("能效等级",c.eg,"级",c.eg==="A"?"行业先进":c.eg==="B"?"行业平均":"待提升")}
+</div>
+<div class="grid g3">
+ <div class="card"><h3>企业能源结构</h3>
+  ${donut([{k:"电力",v:52},{k:"蒸汽",v:21},{k:"天然气",v:17},{k:"其他",v:10}].map(d=>({...d,u:"%"})),150,22)}</div>
+ <div class="card"><h3>企业特色信息（行业画像）</h3>
+  <table>${row("所属行业",c.ind,"园区重点产业")}${row("能碳评价",c.grade+" 级","园区减排排名 TOP"+(9-Math.floor(c.red/8)))}${row("绿电交易","2,100 万kWh","占用电 35%")}${row("减排措施",c.meas.split("｜")[0],"共 "+c.meas.split("｜").length+" 项")}</table></div>
+ <div class="card"><h3>零碳工厂核心指标完成情况</h3>
+  ${["单位能耗碳排放","非化石能源消费占比","非化石电力物理认定占比"].map((n,i)=>`
+   <div style="margin-bottom:10px"><div style="display:flex;font-size:12px;margin-bottom:4px"><span>${n}</span><span style="margin-left:auto;color:#2DD4BF">${[86,74,92][i]}%</span></div>
+   <div class="progress ${[86,74,92][i]>=80?"":"warn"}"><i style="width:${[86,74,92][i]}%"></i></div></div>`).join("")}
+  <div class="hint">三项核心指标当年目标配置与完成情况展示</div></div>
+</div>
+<div class="card"><h3>切换企业</h3><div style="display:flex;gap:8px;flex-wrap:wrap">
+ ${COMPANIES.map(c2=>`<button class="btn ghost sm" style="${c2.id===c.id?"border-color:var(--cyan);color:var(--cyan)":""}" onclick="pickCo(${c2.id})">${c2.name}</button>`).join("")}
+</div></div>
+`;});
+function pickCo(id){curCo=COMPANIES.find(c=>c.id===id);go("entHome");}
+
+reg("entQuery",()=>`
+<div class="tabs">
+ <div class="tab on" data-t="e1">综合能源系统动态感知图</div>
+ <div class="tab" data-t="e2">能源监测（表计溯源 / 层级聚合）</div>
+ <div class="tab" data-t="e3">碳排监测</div>
+</div>
+<div class="card"><div id="tabBody"></div></div>
+`);
+RENDERERS.e1=()=>`<div class="grid g2">
+ <div><div class="sub2">电力一次总接线图 </div>
+  <svg class="topo" viewBox="0 0 560 300">
+   <rect class="node" x="20" y="20" width="110" height="46" rx="4"/><text class="node-t" x="30" y="38">110kV 进线</text><text class="node-val" x="30" y="56">110.2kV · 285A</text>
+   <rect class="node" x="225" y="20" width="110" height="46" rx="4"/><text class="node-t" x="235" y="38">主变 1# 20MVA</text><text class="node-val" x="235" y="56">负载率 62%</text>
+   <rect class="node" x="430" y="20" width="110" height="46" rx="4"/><text class="node-t" x="440" y="38">10kV 母线</text><text class="node-val" x="440" y="56">10.31kV · 0.4kA</text>
+   <line class="edge flow" x1="130" y1="43" x2="225" y2="43"/><line class="edge flow" x1="335" y1="43" x2="430" y2="43"/>
+   ${[["1#车间","128A · 2.4MW",60],["2#车间","96A · 1.8MW",230],["动力中心","210A · 4.1MW",400]].map(n=>`<rect class="node" x="${n[2]}" y="140" width="120" height="46" rx="4"/><text class="node-t" x="${n[2]+10}" y="158">${n[0]}</text><text class="node-val" x="${n[2]+10}" y="176">${n[1]}</text><line class="edge flow" x1="485" y1="66" x2="${n[2]+60}" y2="140"/>`).join("")}
+   <rect class="node" x="230" y="230" width="120" height="46" rx="4"/><text class="node-t" x="240" y="248">分布式光伏</text><text class="node-val" x="240" y="266">6.8MW · 出力 3.1MW</text>
+   <line class="edge flow" x1="290" y1="230" x2="290" y2="186"/>
+   <text class="node-t" x="20" y="292">相角：A 0.0° / B -119.8° / C 120.3° ｜ 功率因数 0.94</text>
+  </svg></div>
+ <div><div class="sub2">分能源管网拓扑图 + 多能源子系统 </div>
+  <svg class="topo" viewBox="0 0 560 300">
+   <rect class="node" x="20" y="30" width="100" height="40" rx="4"/><text class="node-t" x="30" y="54">燃气锅炉房</text>
+   <rect class="node" x="20" y="120" width="100" height="40" rx="4"/><text class="node-t" x="30" y="144">热蒸汽管网</text>
+   <rect class="node" x="20" y="210" width="100" height="40" rx="4"/><text class="node-t" x="30" y="234">自来水/中水</text>
+   ${[["1#车间 蒸汽 8.2t/h",40],["2#车间 蒸汽 5.6t/h",110],["冷库 热水 3.1t/h",180],["生活区 水量 210t/d",250]].map(n=>`<rect class="node" x="200" y="${n[1]}" width="170" height="40" rx="4"/><text class="node-t" x="210" y="${n[1]+24}">${n[0]}</text>`).join("")}
+   <path class="edge flow" d="M120 50 H 200"/><path class="edge flow" d="M120 50 C 160 50 160 130 200 130"/>
+   <path class="edge flow" d="M120 140 H 200"/><path class="edge flow" d="M120 230 C 160 230 160 270 200 270"/>
+   ${[["光伏子系统 6.8MW",40],["储能 2MW/4MWh",110],["充电桩 24 个",180],["微电网 EMS",250]].map(n=>`<rect class="node" x="420" y="${n[1]}" width="120" height="40" rx="4"/><text class="node-t" x="430" y="${n[1]+24}">${n[0]}</text>`).join("")}
+   <path class="edge" d="M370 60 H 420" style="stroke-dasharray:4 3"/><path class="edge" d="M370 60 C 395 60 395 130 420 130" style="stroke-dasharray:4 3"/>
+  </svg></div>
+</div>`;
+RENDERERS.e2=()=>`<div class="grid g2">
+ <div><div class="sub2">表计原始数据溯源 </div>
+  <table><tr><th>测点</th><th>瞬时值</th><th>曲线</th><th>来源</th></tr>
+  <tr><td>1#车间总表 P</td><td style="font-family:Consolas">2,412 kW</td><td>▂▄▆▅▃▄▆▇</td><td><span class="tag ok">表计采集</span></td></tr>
+  <tr><td>2#车间蒸汽 F</td><td style="font-family:Consolas">5.6 t/h</td><td>▄▄▅▅▄▄▅▆</td><td><span class="tag ok">表计采集</span></td></tr>
+  <tr><td>空压站电耗</td><td style="font-family:Consolas">612 kW</td><td>▃▃▄▄▃▃▄▄</td><td><span class="tag ok">表计采集</span></td></tr>
+  <tr><td>锅炉燃气量</td><td style="font-family:Consolas">412 m³/h</td><td>▅▅▆▅▅▆▆▇</td><td><span class="tag lv2">手工填报（10-28 修改·留痕）</span></td></tr></table>
+  <div class="hint">测点类别可按表计实际可采集测点筛选；手工填报修改留痕，作为后续分析与计算的数据支撑</div></div>
+ <div><div class="sub2">企业能源层级数据（建筑/厂房/产线/设备）</div>
+  <table><tr><th>层级</th><th>本期能耗(tce)</th><th>同比</th><th>聚合路径</th></tr>
+  <tr><td>全厂</td><td>11,020</td><td class="down">-4.8%</td><td>总表</td></tr>
+  <tr><td>└ 1#厂房</td><td>6,150</td><td class="down">-6.1%</td><td>厂房→产线</td></tr>
+  <tr><td>&nbsp;&nbsp;└ SMT 产线</td><td>3,420</td><td class="down">-5.4%</td><td>产线→设备</td></tr>
+  <tr><td>&nbsp;&nbsp;&nbsp;&nbsp;└ 回流焊炉</td><td>1,180</td><td class="down">-7.2%</td><td>设备表计</td></tr>
+  <tr><td>└ 2#厂房</td><td>4,870</td><td class="bad">+1.2%</td><td>厂房→产线</td></tr></table>
+  <div class="concl"><b>分析：</b>2#厂房能耗上升主因新增老化测试设备，建议纳入 AI 节能诊断范围。</div></div>
+</div>`;
+RENDERERS.e3=()=>`<div class="grid g2">
+ <div><div class="sub2">碳排因子库计算 · 表计级 CO₂ 曲线 </div>
+  <select><option>因子库：2025 全国电网平均排放因子 0.5366 tCO₂/MWh</option><option>因子库：宁夏区域因子（含绿电核减）</option></select>
+  ${lineChart(["8:00","10:00","12:00","14:00","16:00","18:00","20:00","22:00"],[{name:"CO₂ 排放速率(kg/h)",color:"#2DD4BF",data:[1180,1240,1310,1280,1220,1160,1090,980]}],210,540)}</div>
+ <div><div class="sub2">层级碳排聚合 </div>
+  ${hBar([{k:"全厂",v:22.6},{k:"1#厂房",v:12.1},{k:"2#厂房",v:8.3},{k:"动力中心",v:2.2}],160,540," 千tCO₂/年",(it,i)=>["#2DD4BF","#2E8BC0","#FBBF24","#A78BFA"][i])}</div>
+</div>`;
+
+reg("entAI",()=>`
+<div class="grid g2">
+ <div class="card"><h3>价格解读</h3>
+  <table>${row("计价类型","两部制分时电价","存在尖峰电价")}${row("合同容量","20,000 kVA","需量计费")}${row("尖峰时段","18:00–21:00","占平段电价 172%")}${row("谷段电量占比","31%","相对平段 48%")}</table>
+  ${donut([{k:"谷段",v:31},{k:"平段",v:44},{k:"峰段",v:17},{k:"尖峰",v:8}].map(d=>({...d,u:"%"})),130,18)}</div>
+ <div class="card"><h3>用量分析（峰谷平 + 分时刻）</h3>
+  ${stackedBar(["Q1","Q2","Q3","Q4"],[{name:"谷段",color:"#2DD4BF",data:[412,438,452,441]},{name:"平段",color:"#2E8BC0",data:[585,604,622,610]},{name:"峰段",color:"#FBBF24",data:[225,240,255,248]},{name:"尖峰",color:"#F87171",data:[98,106,121,112]}],200,520)}</div>
+ <div class="card"><h3>功率分析</h3>
+  ${lineChart(["0","4","8","12","16","20","24"],[{name:"用电功率(MW)",color:"#2E8BC0",data:[6.2,5.8,12.4,14.1,13.6,15.2,9.8]}],190,520)}
+  <table>${row("用电负荷率","72.4%","目标 ≥75%")}${row("峰谷差率","38.6%","环比 -2.1pct")}${row("负荷波动率","0.21","平稳")}${row("下网负荷率 / 差率 / 波动系数","74.1% / 35.2% / 0.19","口径含下网侧")}</table></div>
+ <div class="card"><h3>需量分析</h3>
+  ${lineChart(["1月","2月","3月","4月","5月","6月","7月","8月","9月","10月"],[{name:"最大需量(MW)",color:"#FBBF24",data:[16.8,16.2,17.4,18.1,17.6,18.8,19.6,19.2,18.4,17.9]},{name:"容量计费线",color:"#3E5C82",data:[17,17,17,17,17,17,17,17,17,17]}],190,520)}
+  <div class="concl"><b>建议：</b>7–8 月最大需量贴近容量计费线，建议改为按需量计费并加装需量预警。</div></div>
+ <div class="card"><h3>用能结构 / 成本 / 能效</h3>
+  ${donut([{k:"电力",v:52},{k:"蒸汽",v:21},{k:"天然气",v:17},{k:"其他",v:10}].map(d=>({...d,u:"%"})),140,20)}
+  <table>${row("用能总成本","3,842 万元/年","电力占 68%")}${row("单位能耗碳排放","2.09 tCO₂/tce","同比 -4.6%")}${row("非化石能源消费占比","34.5%","核心指标")}</table></div>
+ <div class="card"><h3>用能策略推荐（AI 多目标优化）</h3>
+  <div class="tabs"><div class="tab on">经济优先</div><div class="tab">减排优先</div><div class="tab">以绿排产</div><div class="tab">辅助服务</div><div class="tab">现货交易</div></div>
+  <table><tr><th>推荐策略</th><th>预期收益</th><th>减排量</th></tr>
+  <tr><td>谷段储能充电 + 尖峰放电（1.5MW×2h）</td><td style="color:#2DD4BF">+86 万元/年</td><td>-320 tCO₂</td></tr>
+  <tr><td>空压机群控加卸载优化</td><td style="color:#2DD4BF">+42 万元/年</td><td>-180 tCO₂</td></tr>
+  <tr><td>需量计费方式调整</td><td style="color:#2DD4BF">+35 万元/年</td><td>—</td></tr></table>
+  <div class="hint">多场景能源配置：拓扑与资源配置、数据导入、约束及规划情景配置、算法模型配置及仿真计算</div></div>
+</div>
+`);
+
+reg("entBench",()=>`
+<div class="tabs">
+ <div class="tab on" data-t="b1">能效对标</div>
+ <div class="tab" data-t="b2">能流分析</div>
+ <div class="tab" data-t="b3">碳流分析</div>
+ <div class="tab" data-t="b4">能效平衡与优化</div>
+</div>
+<div class="card"><div id="tabBody"></div></div>
+`);
+RENDERERS.b1=()=>`<div class="grid g2">
+ <div><div class="sub2">对标依据 / 指标定义 </div>
+  <table><tr><th>标准文件</th><th>状态</th><th>判定规则</th></tr>
+  <tr><td>GB/T 2589 综合能耗计算通则</td><td><span class="tag ok">发布使用</span></td><td>折标系数表</td></tr>
+  <tr><td>重点用能设备能效限额标准</td><td><span class="tag ok">发布使用</span></td><td>能效等级 1–3 级</td></tr>
+  <tr><td>某旧版标准（示例）</td><td><span class="tag lv3">过期停用</span></td><td>—</td></tr></table>
+  <div class="hint">支持录入标准文件与判定规则、发布使用与过期停用管理；指标定义含名称/适用对象/数据要求/计算公式；对象配置支持产线、重点用能设备、工序、重点产品</div></div>
+ <div><div class="sub2">对标任务</div>
+  <table><tr><th>对标对象</th><th>指标</th><th>当期值</th><th>标杆值</th><th>结果</th></tr>
+  <tr><td>SMT 产线</td><td>单位产量电耗</td><td>0.182 kWh/pc</td><td>0.165</td><td><span class="tag lv2">未达标</span></td></tr>
+  <tr><td>回流焊炉</td><td>单位产品综合能耗</td><td>达标</td><td>—</td><td><span class="tag lv1">1 级</span></td></tr>
+  <tr><td>空压站</td><td>比功率</td><td>6.8</td><td>6.2</td><td><span class="tag lv2">2 级</span></td></tr></table>
+  <div class="hint">数据准备清单绑定对标对象、指标模板、对标依据及当期数据，具备数据缺失提示；对标计算结果列表展示</div></div>
+</div>`;
+RENDERERS.b2=()=>entSankeyChart("en");
+RENDERERS.b3=()=>entSankeyChart("co");
+RENDERERS.b4=()=>`<div class="grid g2">
+ <div><div class="sub2">能源综合平衡（大数据 + AI 模型）</div>
+  ${lineChart(["周一","周二","周三","周四","周五","周六","周日"],[{name:"供能(tce/d)",color:"#2DD4BF",data:[302,298,310,306,312,288,281]},{name:"用能(tce/d)",color:"#2E8BC0",data:[296,301,304,308,308,286,278]}],210,540)}
+  <div class="concl"><b>平衡结论：</b>周三、周五供大于用（蒸汽放散），建议调整锅炉负荷曲线并启用蓄热，预计年节能 420 tce。</div></div>
+ <div><div class="sub2">能源优化调度参考策略 </div>
+  <table><tr><th>时段</th><th>调度建议</th><th>预期效果</th></tr>
+  <tr><td>谷段 00:00–07:00</td><td>储能充电、蓄热蓄冷</td><td>填谷 18%</td></tr>
+  <tr><td>平段 08:00–17:00</td><td>光伏优先消纳</td><td>自发自用 92%</td></tr>
+  <tr><td>峰段 17:00–21:00</td><td>储能放电 + 需量控制</td><td>削峰 1.5MW</td></tr></table>
+  <div class="hint">结合能效对标、能流分析优化工艺与设备运行参数，实现能源综合平衡与优化调度，提升能源利用效率</div></div>
+</div>`;
+
+/* ---------- 碳排放核算与核查  ---------- */
+reg("entCarbon",()=>`
+<div class="tabs">
+ <div class="tab on" data-t="c1">碳排放核算 ▲</div>
+ <div class="tab" data-t="c2">产品碳足迹</div>
+ <div class="tab" data-t="c3">供应链碳数据</div>
+ <div class="tab" data-t="c4">碳核查支撑 ▲</div>
+</div>
+<div class="card"><div id="tabBody"></div></div>
+`);
+RENDERERS.c1=()=>`
+<div class="kpis" style="grid-template-columns:repeat(5,1fr)">
+ ${kpi("碳排放总量","16,120","tCO₂","核算完成")}
+ ${kpi("单位产品碳排放","0.42","tCO₂/百件","-3.8%")}
+ ${kpi("单位产值碳排放","0.116","tCO₂/万元","-4.2%","down ok")}
+ ${kpi("单位增加值碳排放","0.208","tCO₂/万元","-4.6%","down ok")}
+ ${kpi("配额盈余","-320","tCO₂","⚠ 超排放预警","bad")}
+</div>
+<div class="grid g2">
+ <div><div class="sub2">排放源清单（核算周期+边界内全部排放源）</div>
+  <table><tr><th>排放源</th><th>类别</th><th>活动数据</th><th>排放因子</th><th>CO₂(t)</th></tr>
+  <tr><td>外购电力</td><td>范围二</td><td>22,610 MWh</td><td>0.5366</td><td>12,132</td></tr>
+  <tr><td>天然气锅炉</td><td>范围一</td><td>211 万m³</td><td>2.162 kg/m³</td><td>4,562</td></tr>
+  <tr><td>外购蒸汽</td><td>范围二</td><td>26,800 GJ</td><td>0.11 t/GJ</td><td>2,948</td></tr>
+  <tr><td>公务车辆油品</td><td>范围一</td><td>38.6 t</td><td>3.1 t/t</td><td>120</td></tr></table></div>
+ <div><div class="sub2">碳排放趋势 + 超排放预警 </div>
+  ${lineChart(["2021","2022","2023","2024","2025"],[{name:"碳排放(t)",color:"#2DD4BF",data:[19800,18600,17900,16900,16120]}],200,520)}
+  <div class="concl"><b class="red">超排放预警：</b>年度碳配额 15,800 t，当前排放 16,120 t，缺口 320 t——建议购买 CCER 或绿证抵消，已推送至碳资产管理模块。</div></div>
+</div>
+<div class="card"><h3>碳配置与减排措施 </h3>
+ <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap"><button class="btn ghost sm" onclick="alert('演示：碳核算模型配置')">碳核算模型配置</button><button class="btn ghost sm" onclick="alert('演示：碳排放因子库配置，已更新 2025 版')">碳排放因子库配置（2025 版）</button><button class="btn ghost sm" onclick="alert('演示：排放源数据配置')">排放源数据配置</button></div>
+ <div class="sub2">园区减排策略台账（按技术类别归集，链路分析各策略减排能力）</div>
+ <table><tr><th>减排策略</th><th>技术类别</th><th>减排能力(tCO₂/年)</th><th>状态</th></tr>
+ <tr><td>绿电采购占比提升至 50%（绿电聚合交易模式）</td><td><span class="tag ok">能源替代</span></td><td>3,240</td><td>已立项（减排项目台账）</td></tr>
+ <tr><td>屋顶光伏二期 2.2MW（钙钛矿高效组件试点）</td><td><span class="tag ok">能源替代</span></td><td>1,410</td><td>备案完成</td></tr>
+ <tr><td>氢电耦合示范（谷电 + 光伏制氢，供燃料物流车与工艺助燃）</td><td><span class="tag ok">能源替代</span></td><td>620</td><td>前期研究</td></tr>
+ <tr><td>空压站 AI 智控改造（能源大模型实时调控，节能率 30%+）</td><td><span class="tag">能效提升</span></td><td>890</td><td>实施中</td></tr>
+ <tr><td>制冷机房 AI 全局优化（能效比 4.5→6.22，同步开发碳信用）</td><td><span class="tag">能效提升</span></td><td>1,650</td><td>方案评审</td></tr>
+ <tr><td>数据中心液冷改造（PUE 降至 1.05，适配智算高热场景）</td><td><span class="tag">能效提升</span></td><td>1,320</td><td>实施中</td></tr>
+ <tr><td>10℃ 低温余热浓缩回收（食品/化工余热梯级利用）</td><td><span class="tag">循环利用</span></td><td>740</td><td>已立项</td></tr>
+ <tr><td>共享储能电站 + 全钒液流长时储能（4h 级调节能力）</td><td><span class="tag star">电网互动</span></td><td>2,100</td><td>规划中</td></tr>
+ <tr><td>虚拟电厂聚合可调负荷（20MW 级，AI 毫秒级响应参与调峰）</td><td><span class="tag star">电网互动</span></td><td>1,780</td><td>平台搭建</td></tr>
+ <tr><td>熔盐储热 + 蒸汽管网移峰填谷（光热互补 24h 连续供能）</td><td><span class="tag star">电网互动</span></td><td>980</td><td>规划中</td></tr>
+ <tr><td>燃机低浓度烟气碳捕集（CCUS）小试论证</td><td><span class="tag lv2">负碳技术</span></td><td>950</td><td>技术论证</td></tr>
+ </table>
+ <div class="sub2" style="margin-top:12px">先进减排技术推荐库（结合 2025–2026 行业领先实践，供园区/企业选择落地）</div>
+ <table><tr><th>推荐技术</th><th>适用场景</th><th>行业标杆参考</th><th>园区落地建议</th></tr>
+ <tr><td><b>AI 能效大模型智控</b></td><td>空压站、制冷机房、重点工艺参数寻优</td><td>卡奥斯「能源小智」空压站节能率超 30%、年省电费近 700 万；厦门天马制冷机房能效比 4.5→6.22，首年减碳 1.7 万t、碳信用按 65 元/t 挂牌交易</td><td>园区 4 座空压站 + 3 处集中机房率先接入，节能量经核算后开发碳信用「卖碳增收」</td></tr>
+ <tr><td><b>虚拟电厂（VPP）</b></td><td>聚合储能、可调负荷、充电桩参与电网调峰与电力交易</td><td>陕西虚拟电厂平台聚合可调资源 155.8 万kW（相当于一座大型火电厂）；安徽 20MW 级 AI 虚拟电厂预测误差 ≤2.3%、毫秒级响应，服务百家企业累计提效 20%、减碳 15%</td><td>以绿洲光伏储能 60MWh + 各企业可调负荷组建园区级 VPP，参与西北省际调峰辅助服务分摊收益</td></tr>
+ <tr><td><b>长时储能</b></td><td>4h 以上跨时段调节、消纳夜间风电</td><td>全钒液流/锌铁液流电池规模化商用；固态电池高能量密度方向</td><td>共享储能电站模式（天津经开区实践）降低企业初投，采用液流路线适配园区热特性</td></tr>
+ <tr><td><b>熔盐储热 + 光热互补</b></td><td>蒸汽/热力需求企业的 24h 连续供能</td><td>100MW 线性菲涅尔光热 + 熔盐储热实现全天候发电，突破绿电「靠天吃饭」</td><td>对接贺兰装备、兴庆化工蒸汽负荷，谷电/光热加热熔盐夜间放热，替代部分燃气锅炉</td></tr>
+ <tr><td><b>氢电耦合</b></td><td>谷电制氢自用：燃料物流车、焊接助燃、工艺热</td><td>杭州亚运氢电耦合园区：光伏+谷电制氢氧，氢供大巴物流车、氧供焊接、余热供注塑，年节约成本约 256 万元</td><td>利用园区夜间低谷电价与绿洲光伏弃电制氢，先在物流与装备焊接场景示范</td></tr>
+ <tr><td><b>光储直柔建筑</b></td><td>办公楼宇、厂房光伏 + 直流配电 + 柔性用电</td><td>雄安智慧零碳园区：光伏地砖 + 交直流混合微电网 + 磁悬浮冷机/地源热泵复合供能，全电园区零碳运行</td><td>新建厂房按光储直柔标准设计，楼宇可调负荷联建虚拟电厂</td></tr>
+ <tr><td><b>碳信用开发与交易</b></td><td>节能改造后碳资产变现</td><td>全国首个集中式制冷机房碳信用项目落地，实现从「被动减碳」到「主动赚碳」</td><td>园区统一遴选可开发碳信用的节能项目（机房智控、余热回收），打包对接碳市场</td></tr>
+ <tr><td><b>CCUS（碳捕集利用与封存）</b></td><td>燃机烟气、化工工艺等难减排环节兜底</td><td>长兴岛全国首套 10 万吨级燃机低浓度烟气碳捕集装置；宝武钢铁冶金流程耦合 CCUS</td><td>兴庆精细化工先行小试论证，结合 CCER 政策与碳交易收益测算经济性</td></tr>
+ </table>
+ <div class="hint"><b>技术选型原则（行业共识）：</b>核心运行环节优先采用商业化成熟技术（分布式光伏、储能、高效电机、AI 能效平台）；示范区域试点前沿技术（氢能、CCUS、长时储能），并预留物理空间与系统接口避免技术路径过早锁定；同时结合全生命周期成本、碳减排收益与碳交易收益综合测算，成熟技术快速推广、长周期技术借力政策激励。</div>
+ <div class="hint">减排链路分析各策略下的减排能力；减排项目台账以监测视图与列表展示概览与明细</div></div>`;
+RENDERERS.c2=()=>`<div class="grid g2">
+ <div><div class="sub2">产品碳足迹核算 </div>
+  <table><tr><th>产品</th><th>核算边界</th><th>碳足迹</th><th>认证</th></tr>
+  <tr><td>智能网关终端</td><td>摇篮到大门</td><td>8.6 kgCO₂/台</td><td><span class="tag ok">已出证</span></td></tr>
+  <tr><td>用电监测终端</td><td>摇篮到坟墓</td><td>21.4 kgCO₂/台</td><td><span class="tag lv2">核算中</span></td></tr></table>
+  <div class="hint">模板配置：产线、生产起止时间、核算边界、生产工序、排放源种类及使用量；原始数据交叉验证与溯源，满足产品碳足迹标识认证要求；模板留存可复用</div></div>
+ <div><div class="sub2">核算报告与下游共享</div>
+  <div style="display:flex;gap:8px;margin-bottom:10px"><button class="btn sm" onclick="alert('演示：按系统模板生成产品碳足迹核算报告')">生成碳足迹报告</button><button class="btn ghost sm" onclick="alert('演示：向下游用户提供碳足迹核算过程与结果')">共享给下游客户</button></div>
+  <div class="concl"><b>共享能力：</b>向下游用户提供本企业产品碳足迹核算过程、核算结果及核算报告，支撑客户供应链碳管理要求。</div></div>
+</div>`;
+RENDERERS.c3=()=>`<div class="sub2">上游供应商产品碳数据 </div>
+<table><tr><th>原材料编码</th><th>名称</th><th>规格</th><th>数量</th><th>产地</th><th>入库时间</th><th>单位碳排</th><th>供应商</th><th>报告</th></tr>
+<tr><td>RM-2201</td><td>PCB 板</td><td>4 层</td><td>12,000 片</td><td>广东</td><td>2025-10-18</td><td>1.82 kg/片</td><td>华南电子</td><td><span style="color:var(--cyan);cursor:pointer" onclick="alert('演示：在线预览供应商碳足迹报告与证书')">预览 ↗</span></td></tr>
+<tr><td>RM-2202</td><td>铝合金外壳</td><td>CNC</td><td>12,000 件</td><td>宁夏</td><td>2025-10-20</td><td>0.94 kg/件</td><td>银北新材料</td><td><span style="color:var(--cyan);cursor:pointer" onclick="alert('演示：在线预览')">预览 ↗</span></td></tr>
+<tr><td>RM-2203</td><td>包装箱</td><td>再生纸</td><td>12,000 套</td><td>甘肃</td><td>2025-10-22</td><td>0.12 kg/套</td><td>塞上包装</td><td><span style="color:var(--cyan);cursor:pointer" onclick="alert('演示：在线预览')">预览 ↗</span></td></tr></table>
+<div class="hint">支持在线预览上游供应商碳足迹报告与碳足迹证书</div>`;
+RENDERERS.c4=()=>`
+<div class="card" style="background:rgba(167,139,250,.06)"><h3>核算过程数据追踪溯源 </h3>
+ <table><tr><th>数据记录</th><th>来源</th><th>操作人</th><th>获取时间</th><th>修改存证</th><th>链上校验</th></tr>
+ <tr><td>1#车间总表 10 月电量</td><td>表计采集</td><td>系统</td><td>11-01 00:05</td><td>无修改</td><td><span class="tag ok">✓ 哈希一致</span></td></tr>
+ <tr><td>锅炉燃气量 10-28</td><td>手工填报</td><td>王工</td><td>10-28 14:22</td><td><span class="tag lv2">修改 1 次（412→408 m³/h）</span></td><td><span class="tag ok">✓ 存证上链</span></td></tr>
+ <tr><td>排放因子库 2025 版</td><td>因子库配置</td><td>李工</td><td>10-12 09:00</td><td>版本 v3.1</td><td><span class="tag ok">✓ 可交叉验证</span></td></tr></table>
+ <div class="hint">标识数据来源（表计或手工填报操作人）的数据修改存证及数据获取时间，形成数据溯源；通过区块链或可交叉验证方式保证核算过程数据与原始凭证不可篡改、准确可信</div></div>
+<div class="grid g2">
+ <div><div class="sub2">碳排放报告 </div>
+  <table><tr><th>报告</th><th>模板</th><th>状态</th><th>操作</th></tr>
+  <tr><td>2025 年度碳排放报告</td><td>内置标准模板</td><td>已生成</td><td><button class="btn sm" onclick="alert('演示：在线预览')">在线预览</button> <button class="btn ghost sm" onclick="alert('演示：一键下载')">一键下载</button></td></tr>
+  <tr><td>2025 Q3 碳排放报告</td><td>内置标准模板</td><td>已生成</td><td><button class="btn sm" onclick="alert('演示：在线预览')">在线预览</button> <button class="btn ghost sm" onclick="alert('演示：一键下载')">一键下载</button></td></tr></table></div>
+ <div><div class="sub2">碳核查材料汇集 </div>
+  <table><tr><th>材料</th><th>份数</th></tr>
+  <tr><td>活动数据原始凭证</td><td>126 份</td></tr><tr><td>因子库与模型配置记录</td><td>18 份</td></tr><tr><td>手工填报修改存证</td><td>9 份</td></tr><tr><td>层级聚合与计算过程表</td><td>42 份</td></tr></table>
+  <button class="btn sm" style="margin-top:8px" onclick="alert('演示：一键下载全部核查材料')">一键下载全部核查材料</button></div>
+</div>`;
+
+/* ---------- 碳资产管理  ---------- */
+reg("entAsset",()=>`
+<div class="tabs">
+ <div class="tab on" data-t="a1">碳配额</div><div class="tab" data-t="a2">CCER 管理</div><div class="tab" data-t="a3">绿证管理</div><div class="tab" data-t="a4">绿电管理</div><div class="tab" data-t="a5">碳交易</div>
+</div>
+<div class="card"><div id="tabBody"></div></div>
+`);
+RENDERERS.a1=()=>`
+<div class="kpis" style="grid-template-columns:repeat(4,1fr)">
+ ${kpi("当年度碳配额","15,800","tCO₂","")}
+ ${kpi("实际排放","16,120","tCO₂","缺口 -320 t","bad")}
+ ${kpi("次年度配额测算","16,400","tCO₂","基准线法")}
+ ${kpi("履约状态","未履约","","截止 2025-12-31","bad")}
+</div>
+<div class="card"><h3>碳配额分析与告警 </h3>
+ <div class="concl"><b class="red">配额告警：</b>盈余量已转负（-320 t），触发降碳措施提示——建议：①启动 CCER 购置 500 t；②将空压机优化减排量（580 t）纳入核证。支持按年度录入配额数据与次年度测算。</div></div>`;
+RENDERERS.a2=()=>`<div class="grid g2">
+ <div><div class="sub2">CCER 项目构成</div>${donut([{k:"并网光伏",v:1800},{k:"造林碳汇",v:950},{k:"其他",v:120}],150,22)}</div>
+ <div><div class="sub2">CCER 项目管理（监测仪表 + 表格）</div>
+  <table><tr><th>项目</th><th>类型</th><th>年减排量(t)</th><th>状态</th></tr>
+  <tr><td>园区分布式光伏方法学项目</td><td>并网光伏</td><td>1,800</td><td>登记中</td></tr>
+  <tr><td>宁夏防沙治沙碳汇</td><td>造林</td><td>950</td><td>已登记</td></tr></table>
+  <div class="concl"><b>量化分析：</b>已登记项目累计签发 2,530 t，可覆盖当前配额缺口；跟踪减排成效按季度更新，实现自愿减排项目统一管理与查看。</div></div>
+</div>`;
+RENDERERS.a3=()=>`<div class="grid g2">
+ <div><div class="sub2">绿证资产管理 </div>
+  <table><tr><th>类型</th><th>数量(张)</th><th>来源</th><th>交易日期</th></tr>
+  <tr><td>GEC 绿证</td><td>12,400</td><td>宁夏绿电交易</td><td>2025-09-12</td></tr>
+  <tr><td>GEC 绿证</td><td>8,600</td><td>河北风电</td><td>2025-06-30</td></tr></table>
+  <div class="hint">导入并查询类型/数量/来源/交易日期，统一管理</div></div>
+ <div><div class="sub2">核销 / 购入测算 </div>
+  <table>${row("需核销绿证量","10,200 张","结合零碳工厂核心指标与年度目标")}${row("需购入绿证量","3,800 张","缺口测算")}</table>
+  <div class="concl"><b>测算逻辑：</b>按非化石能源电力消费物理认定量占比 45% 目标倒推，现有绿证覆盖后仍缺 3,800 张，建议 Q4 集中购入。</div></div>
+</div>`;
+RENDERERS.a4=()=>`<div class="sub2">绿电项目列表（按户名 / 电压等级筛选）</div>
+<div style="display:flex;gap:8px;margin-bottom:10px"><select><option>全部户名</option><option>电通物联科技</option></select><select><option>全部电压等级</option><option>10kV</option><option>35kV</option></select><button class="btn ghost sm" onclick="alert('演示：筛选查询绿电项目清单')">查询</button></div>
+<table><tr><th>项目</th><th>并网电压</th><th>年发电量(万kWh)</th><th>供电量(万kWh)</th><th>交易电量</th><th>交易金额(万元)</th><th>结算月份</th></tr>
+<tr><td>屋顶光伏一期</td><td>10kV</td><td>780</td><td>742</td><td>742</td><td>286</td><td>2025-10</td></tr>
+<tr><td>屋顶光伏二期</td><td>10kV</td><td>412</td><td>396</td><td>396</td><td>152</td><td>2025-10</td></tr></table>
+<div class="hint">支持新增或导入绿电交易电量、交易金额、交易单价、结算月份等数据</div>`;
+RENDERERS.a5=()=>`<div class="grid g2">
+ <div><div class="sub2">碳交易台账 + 履约分析 </div>
+  <table><tr><th>日期</th><th>方向</th><th>数量(t)</th><th>价格(元)</th><th>金额(万元)</th></tr>
+  <tr><td>2025-08-14</td><td>买入</td><td>800</td><td>96.5</td><td>7.72</td></tr>
+  <tr><td>2025-03-22</td><td>卖出</td><td>500</td><td>88.2</td><td>4.41</td></tr></table>
+  <div class="concl"><b>策略建议：</b>当前缺口 320 t，实时碳价 <b>102.4 元/t</b>（月均价 98.6），价格呈上行趋势——建议尽快完成履约买入，避免年末价格冲高。柱状图分析碳履约盈缺。</div></div>
+ <div><div class="sub2">实时碳价 + 交易撮合 </div>
+  ${lineChart(["6月","7月","8月","9月","10月","11月"],[{name:"月均价(元/t)",color:"#FBBF24",data:[86.2,89.5,92.1,94.8,98.6,102.4]},{name:"实时价",color:"#F87171",data:[88,91,95,97,101,102.4]}],190,520)}
+  <table><tr><th>方向</th><th>主体</th><th>可交易量(t)</th><th>期望价格(元)</th></tr>
+  <tr><td style="color:#4ADE80">卖方</td><td>绿洲光伏电力</td><td>2,000</td><td>98</td></tr>
+  <tr><td style="color:#F87171">买方</td><td>黄河生物医药</td><td>600</td><td>≤105</td></tr></table>
+  <div class="hint">展示可交易碳资产的卖方与买方信息，为企业碳交易提供撮合渠道</div></div>
+</div>`;
+
+/* ---------- AI 智能体  ---------- */
+reg("aiAgent",()=>`
+<div class="grid" style="grid-template-columns:2fr 1fr">
+ <div class="card" style="margin-bottom:0"><h3>AI 智能问答 </h3>
+  <div class="chat">
+   <div class="chat-list" id="chatList">
+    <div class="msg ai">您好，我是苏银产业园零碳 AI 智能体。<br>支持语音唤醒与自然语言交互、多轮对话、上传图片附件、问答结果图表展示。<br>可基于园区知识库与碳数据解答：政策分析、能耗与碳排数据查询分析、能效诊断与优化等问题。</div>
+   </div>
+   <div class="chips">
+    ${AI_QA.map((qa,i)=>`<span class="chip" onclick="askAI(${i})">${qa.q}</span>`).join("")}
+   </div>
+   <div class="chat-input">
+    <input type="text" id="chatInput" placeholder="输入问题，例如：园区今年能耗多少？" onkeydown="if(event.key==='Enter')askFree()">
+    <button class="btn" onclick="askFree()">发送</button>
+    <button class="btn ghost" title="语音交互（对应演示要求：支持语音唤醒及自然语言/语音交互提问）">🎤</button>
+   </div>
+  </div></div>
+ <div>
+  <div class="card"><h3>智能体平台能力</h3>
+   <table>${row("专用大模型","零碳园区垂直领域","统一下发")}${row("专业智能体","问数/预测/诊断/规划","4 类")}${row("场景数据集","园区 5 年能碳数据","脱敏")}${row("算法/技能组件","预测·诊断·优化","可插拔")}${row("AI 评测体系","准确率/幻觉率","季度评测")}</table>
+   <div class="hint">支撑专用大模型、专业智能体、场景数据集、场景模型、算法组件、技能组件、AI 评测体系的统一研发、管理、部署与运行</div></div>
+  <div class="card"><h3>▲ 重要参数提示</h3>
+   <div class="concl"><b class="red">AI智能预测：</b>融合历史与实时数据，预测能耗、碳排放、负荷及新能源出力，支撑运行优化决策——需提供系统截图佐证。</div>
+   <div class="concl"><b class="red">AI节能诊断：</b>实时分析园区能耗数据，定位高耗能环节与异常，输出节能潜力、整改建议及预期收益。</div>
+   <div class="hint"> 均需提供源代码</div></div>
+ </div>
+</div>`);
+
+function askAI(i){const qa=AI_QA[i];const list=document.getElementById("chatList");if(!list)return;
+ list.innerHTML+=`<div class="msg user">${qa.q}</div>`;
+ const tip=document.createElement("div");tip.className="msg ai";tip.innerHTML='<span class="typing">正在调用知识库与碳数据分析…</span>';list.appendChild(tip);
+ list.scrollTop=list.scrollHeight;
+ setTimeout(()=>{tip.remove();const m=document.createElement("div");m.className="msg ai";m.textContent=qa.a;list.appendChild(m);list.scrollTop=list.scrollHeight;},700);}
+function askFree(){const inp=document.getElementById("chatInput");if(!inp)return;const q=inp.value.trim();if(!q)return;inp.value="";
+ const hit=AI_QA.find(x=>q.includes("碳")&&x.q.includes("碳排")||q.includes("预测")||q.includes("节能")||q.includes("规划"));
+ const list=document.getElementById("chatList");
+ list.innerHTML+=`<div class="msg user">${q}</div>`;
+ setTimeout(()=>{const m=document.createElement("div");m.className="msg ai";
+  m.textContent=hit?hit.a:"已在园区知识库检索，为您匹配到相关政策与口径说明（演示环境请使用上方预置问题体验完整能力）。";
+  list.appendChild(m);list.scrollTop=list.scrollHeight;},600);}
+
+/* ---------- 物联网平台  ---------- */
+reg("iot",()=>`
+<div class="kpis" style="grid-template-columns:repeat(5,1fr)">
+ ${kpi("接入设备","334","台套","在线率 98.2%","up ok")}
+ ${kpi("智能通信网关","40","台","38 台在线")}
+ ${kpi("用电监测终端(低压)","65","台","数据完整率 99.1%")}
+ ${kpi("用电监测终端(高压)","23","台","含互感器 195 只")}
+ ${kpi("用户侧系统集成终端","2","台","含蒸汽流量计 2 台")}
+</div>
+<div class="grid g2">
+ <div class="card"><h3>设备管理</h3>
+  <table><tr><th>设备</th><th>位置</th><th>状态</th><th>最近心跳</th></tr>
+  <tr><td>GW-012 智能通信网关</td><td>兴庆精细化工 配电室</td><td><span class="tag ok">在线</span></td><td>10s 前</td></tr>
+  <tr><td>LC-033 低压监测终端</td><td>贺兰装备制造 1#车间</td><td><span class="tag ok">在线</span></td><td>12s 前</td></tr>
+  <tr><td>HV-008 高压监测终端</td><td>园区 10kV 开闭所</td><td><span class="tag lv2">离线 35 分钟</span></td><td>—</td></tr>
+  <tr><td>SF-002 蒸汽流量计</td><td>塞上食品加工 锅炉房</td><td><span class="tag ok">在线</span></td><td>15s 前</td></tr></table></div>
+ <div class="card"><h3>规则引擎 / 数据服务 / 远程维护</h3>
+  <table>${row("规则引擎","告警规则 28 条 / 联动规则 12 条","含超阈值自动告警")}${row("数据服务","MQTT / REST / 数据订阅","采集周期 1–15min 可设")}${row("网关管理","远程配置 / 固件升级","支持协议扩展")}${row("远程维护","远程诊断 / 日志回传","现场免维护")}${row("基础支撑","设备影子 / 边缘缓存","断网续传 ≥72h")}</table>
+  <div class="hint">物联网平台应包含基础支撑、平台门户、设备管理、规则引擎、网关管理、数据服务、远程维护等功能</div></div>
+</div>
+`);
+
+/* ================= 路由与初始化 ================= */
+const NAV=[
+ {group:"园区端",items:[
+  {id:"dashboard",t:"能碳总览驾驶舱",req:"",sub:""},
+  {id:"oneMap",t:"能碳全景一张图",req:"",sub:""},
+  {id:"multi",t:"多维能碳分析",req:"",sub:""},
+  {id:"alarm",t:"能碳告警",req:"",sub:""},
+  {id:"assess",t:"碳考核评价",req:"",sub:""},
+  {id:"path",t:"零碳路径推演",req:"",sub:""},
+  {id:"report",t:"碳排放报告",req:"",sub:""},
+ ]},
+ {group:"企业端",items:[
+  {id:"entHome",t:"企业大屏首页",req:"",sub:""},
+  {id:"entQuery",t:"能耗查询与监测",req:"",sub:""},
+  {id:"entAI",t:"AI 用能分析与策略",req:"",sub:"能源消费分析与用能策略推荐（AI 应用）"},
+  {id:"entBench",t:"能效对标与能流碳流",req:"",sub:""},
+  {id:"entCarbon",t:"碳排放核算与核查",req:"",sub:"核算 · 碳足迹 · 供应链 · 核查支撑"},
+  {id:"entAsset",t:"碳资产管理",req:"",sub:"配额 / CCER / 绿证 / 绿电 / 碳交易"},
+ ]},
+ {group:"AI 与物联",items:[
+  {id:"aiAgent",t:"AI 大模型智能体",req:"",sub:""},
+  {id:"iot",t:"物联网平台",req:"",sub:"设备管理 / 规则引擎 / 网关管理 / 数据服务"},
+ ]},
+];
+let curPage="dashboard";
+function buildNav(){
+ const nav=document.getElementById("nav");
+ nav.innerHTML=NAV.map(g=>`<div class="nav-group">${g.group}</div>`+g.items.map(it=>
+  `<div class="nav-item" data-id="${it.id}" onclick="go('${it.id}')">${it.t}${it.id==="dashboard"?'<span class="fs-tag">⛶ 全屏</span>':""}<span class="req">${it.req}</span></div>`).join("")).join("");
+}
+/* 驾驶舱进入全屏大屏模式（隐藏侧栏/顶栏）；ESC 或右上角按钮退回系统界面 */
+const FS_BAR=`<div class="fs-bar"><h1>苏银产业园 AI 零碳数智平台 · 能碳总览驾驶舱</h1>
+ <span class="fs-sub">园区级能碳运行监测 · 全屏大屏模式（按 ESC 或点右上按钮返回系统）</span>
+ <span class="fs-clock" id="fsClock"></span>
+ <button class="fs-exit" onclick="exitFS()">⛶ 退出全屏 · 返回系统</button></div>`;
+function exitFS(){document.body.classList.remove("fs");go("oneMap");}
+window.exitFS=exitFS;
+document.addEventListener("keydown",function(e){if(e.key==="Escape"&&document.body.classList.contains("fs"))exitFS();});
+function go(id){
+ curPage=id;
+ const fs=id==="dashboard";
+ document.body.classList.toggle("fs",fs);
+ document.querySelectorAll(".nav-item").forEach(n=>n.classList.toggle("active",n.dataset.id===id));
+ const item=NAV.flatMap(g=>g.items).find(i=>i.id===id);
+ document.getElementById("pageTitle").textContent=item.t;
+ document.getElementById("pageSub").textContent=item.sub;
+ const content=document.getElementById("content");
+ content.innerHTML=(fs?FS_BAR:"")+`<div class="page active" id="pg-${id}">${PAGES[id].render()}</div>`;
+ content.scrollTop=0;
+ bindTabs();
+ if(id==="alarm")renderAlarmTable();
+ if(id==="report")renderReport();
+ if(id==="oneMap"){OM.year=2025;omGranInit();}
+ if(id==="multi"){const t=document.querySelector("#multiTabs .tab.on");if(t)t.click();}
+ if(id==="entQuery"){const t=document.querySelector(".tab.on[data-t='e1']");if(t)t.click();}
+ if(id==="entBench"){const t=document.querySelector(".tab.on[data-t='b1']");if(t)t.click();}
+ if(id==="entCarbon"){const t=document.querySelector(".tab.on[data-t='c1']");if(t)t.click();}
+ if(id==="entAsset"){const t=document.querySelector(".tab.on[data-t='a1']");if(t)t.click();}
+ if(id==="aiAgent"&&typeof aiRender==="function")aiRender();
+}
+(function(){var _rt=document.getElementById("reqToggle");if(_rt)_rt.addEventListener("change",function(){document.body.classList.toggle("show-req",this.checked);});})();
+function tick(){const d=new Date();const p=n=>String(n).padStart(2,"0");
+ const s=d.getFullYear()+"-"+p(d.getMonth()+1)+"-"+p(d.getDate())+" "+p(d.getHours())+":"+p(d.getMinutes())+":"+p(d.getSeconds());
+ document.getElementById("clock").textContent=s;
+ const fc=document.getElementById("fsClock");if(fc)fc.textContent=s;}
+setInterval(tick,1000);tick();
+buildNav();go("dashboard");
+
+/* ================= 演示视频增强层：按评分点补齐演示功能 ================= */
+/* 视觉增强样式 */
+document.head.insertAdjacentHTML("beforeend",`<style>
+.iso-stage{width:100%;aspect-ratio:860/560;max-height:480px;perspective:1000px;overflow:hidden;background:radial-gradient(ellipse at 50% 30%,#12294A 0%,#0A1628 75%);border-radius:8px;display:flex;align-items:center;justify-content:center;}
+.iso-world{width:860px;height:560px;transform-style:preserve-3d;transition:transform .9s cubic-bezier(.4,0,.2,1);will-change:transform;}
+.iso-btn.on{background:var(--blue);color:#fff;border-color:var(--blue);}
+.fband{fill:none;stroke-linecap:round;stroke-dasharray:10 7;animation:fdash 1.1s linear infinite;}
+@keyframes fdash{to{stroke-dashoffset:-17;}}
+.flow-src{fill:#152844;stroke:#3B82C4;stroke-width:1.2;}
+.flow-lb{fill:#8FA8C4;font-size:11px;}
+.flow-v{fill:#fff;font-size:11px;font-family:Consolas,monospace;}
+.info-card{background:linear-gradient(165deg,rgba(19,36,62,.92),rgba(13,25,45,.82));border:1px solid rgba(64,120,190,.28);border-radius:10px;padding:12px;cursor:pointer;transition:all .22s;position:relative;overflow:hidden;}
+.info-card:hover{transform:translateY(-3px);border-color:rgba(56,189,248,.55);box-shadow:0 10px 24px rgba(0,91,172,.3);}
+.info-card .ic{font-size:20px;}
+.info-card .t{color:#fff;font-size:13px;margin-top:6px;font-weight:600;}
+.info-card .d{color:#6FA0CC;font-size:11px;margin-top:4px;line-height:1.6;}
+.info-card::after{content:"";position:absolute;right:-14px;top:-14px;width:52px;height:52px;border-radius:50%;background:radial-gradient(circle,rgba(56,189,248,.18),transparent 70%);}
+.core-strip{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;}
+.core-item{background:rgba(19,36,62,.9);border:1px solid rgba(64,120,190,.28);border-radius:10px;padding:10px 12px;cursor:pointer;transition:all .22s;}
+.core-item:hover{border-color:rgba(56,189,248,.55);transform:translateY(-2px);}
+.core-item .n{color:#DCE8F5;font-size:12px;}
+.core-item .p{margin-top:6px;}
+.core-item .m{font-size:11px;color:#6FA0CC;margin-top:5px;}
+.mic-btn.listening{background:var(--red)!important;animation:micpulse 1s infinite;}
+@keyframes micpulse{0%,100%{box-shadow:0 0 0 0 rgba(248,113,113,.5);}50%{box-shadow:0 0 0 10px rgba(248,113,113,0);}}
+.ai-side{display:flex;flex-direction:column;gap:8px;}
+.ai-sess{border:1px solid var(--line);border-radius:8px;padding:9px 12px;cursor:pointer;font-size:12px;color:var(--txt2);transition:all .2s;}
+.ai-sess:hover{border-color:#38BDF8;}
+.ai-sess.on{background:rgba(0,91,172,.3);border-color:#38BDF8;color:#fff;}
+.ai-sess .sub{font-size:10px;color:var(--txt3);margin-top:3px;}
+.msg img.thumb{max-width:180px;border-radius:6px;border:1px solid var(--line);display:block;margin-top:6px;}
+.demo-fab{position:fixed;right:18px;bottom:18px;z-index:90;}
+.demo-fab button{background:linear-gradient(135deg,#0B6EC5,#005BAC);border:none;color:#fff;padding:10px 18px;border-radius:22px;font-size:13px;cursor:pointer;box-shadow:0 8px 22px rgba(11,110,197,.5);}
+.demo-panel{position:fixed;right:18px;bottom:64px;width:330px;max-height:70vh;overflow-y:auto;z-index:90;background:rgba(13,25,45,.96);border:1px solid rgba(64,120,190,.4);border-radius:12px;padding:14px;display:none;backdrop-filter:blur(12px);box-shadow:0 18px 40px rgba(2,8,20,.6);}
+.demo-panel.open{display:block;}
+.demo-panel h4{color:#fff;font-size:13px;margin-bottom:8px;}
+.demo-step{border:1px solid var(--line);border-radius:8px;padding:8px 10px;margin-bottom:8px;font-size:12px;}
+.demo-step b{color:#7DD3FC;display:block;margin-bottom:4px;}
+.demo-step .pts{color:#8FA8C4;font-size:11px;line-height:1.7;}
+.demo-step button{margin-top:6px;}
+.dist-lb{fill:#5D7A9C;font-size:13px;letter-spacing:2px;}
+</style>`);
+
+/* 片区划分（一张图按街道/园区维度） */
+const DISTRICTS=[
+ {name:"如意街街道",pts:"90,80 480,70 480,540 300,540 90,420",color:"rgba(46,139,192,.10)",stroke:"#2E8BC0"},
+ {name:"京河大道街道",pts:"480,70 700,66 700,540 480,540",color:"rgba(45,212,191,.10)",stroke:"#2DD4BF"},
+ {name:"光伏产业园片区",pts:"700,66 930,70 950,300 860,330 700,330",color:"rgba(251,191,36,.10)",stroke:"#FBBF24"},
+ {name:"综合产业社区",pts:"700,330 860,330 820,520 700,540",color:"rgba(167,139,250,.12)",stroke:"#A78BFA"}];
+const DIST_OF={1:"如意街街道",2:"如意街街道",3:"京河大道街道",4:"京河大道街道",5:"京河大道街道",6:"综合产业社区",7:"光伏产业园片区",8:"如意街街道"};
+COMPANIES.forEach(c=>c.dist=DIST_OF[c.id]);
+
+/* 地图重绘：增加片区图层 */
+function renderMap(mode){
+ const zones=mode==="onemap"?DISTRICTS.map(d=>`<polygon points="${d.pts}" fill="${d.color}" stroke="${d.stroke}" stroke-width="1.5" stroke-dasharray="6 4"/><text class="dist-lb" x="${d.pts.split(" ")[0].split(",")[0]}" y="${+d.pts.split(" ")[0].split(",")[1]+22}" fill="${d.stroke}" opacity=".9">${d.name}</text>`).join(""):"";
+ const body=`<div class="map-wrap"><svg class="map-svg" viewBox="0 0 1000 560">
+  <polygon points="120,80 900,60 950,300 820,520 300,540 90,420" fill="${lc("#0E2138","#DCEBF7")}" stroke="${lc("#2E8BC0","#7FB0D4")}" stroke-width="2"/>
+  ${zones}
+  <path d="M120 260 H 930" stroke="${lc("#1E3A5C","#C3D8EB")}" stroke-width="8"/>
+  <path d="M480 62 V 535" stroke="${lc("#1E3A5C","#C3D8EB")}" stroke-width="8"/>
+  <text x="500" y="275" fill="${lc("#3E5C82","#7E97AE")}" font-size="12">京河大道</text>
+  <text x="140" y="250" fill="${lc("#3E5C82","#7E97AE")}" font-size="12">如意街</text>
+  <rect x="620" y="360" width="90" height="40" fill="${lc("#12294A","#FFFFFF")}" stroke="${lc("#2E4C77","#AECBE2")}"/><text x="630" y="385" fill="${lc("#5D7A9C","#5A7089")}" font-size="11">智慧产业研发大厦</text>
+  <rect x="150" y="90" width="110" height="34" fill="${lc("#12294A","#FFFFFF")}" stroke="${lc("#2E4C77","#AECBE2")}"/><text x="160" y="112" fill="${lc("#5D7A9C","#5A7089")}" font-size="11">集中式光伏区</text>
+  <g id="mapDots"></g>
+ </svg></div>`;
+ if(mode==="onemap")return `<div style="position:relative">
+  ${body}
+  <div style="position:absolute;top:10px;right:12px;display:flex;flex-direction:column;gap:6px;z-index:5">
+   <button class="btn sm" title="放大" onclick="omZoomAt(0.8)">＋</button>
+   <button class="btn sm" title="缩小" onclick="omZoomAt(1.25)">－</button>
+   <button class="btn ghost sm" title="复位视图" onclick="omZoomReset()">⤾</button>
+  </div>
+  <div class="hint" style="margin:6px 0 0;text-align:right">支持滚轮缩放 / 拖拽平移 / 按钮缩放复位</div>
+ </div><div id="mapLegend" class="legend" style="margin-top:8px"></div>`;
+ return `${body}<div id="mapLegend" class="legend" style="margin-top:8px"></div>`;
+}
+function renderMapDots(mode,query){
+ const g=document.getElementById("mapDots");if(!g)return;
+ const key=mode==="onemap"?OM.factor:"en";
+ const pf=omPeriodFactor();
+ const val=c=>{const idx=YEARS.indexOf(OM.year);
+  if(key==="co")return c.co5[idx]*pf;if(key==="cl")return c.asset/300*pf;if(key==="gl")return c.asset/500;return c.en5[idx]*pf;};
+ let list=COMPANIES;
+ if(mode==="onemap"&&OM.dist&&OM.dist!=="all")list=list.filter(c=>c.dist===OM.dist);
+ if(query)list=list.filter(c=>c.name.includes(query));
+ if(!list.length){g.innerHTML="";return;}
+ const mx=Math.max(...list.map(val));
+ const unit={en:" 万tce",co:" 万tCO₂",cl:" 万kWh",gl:" 分"}[key]||"";
+ const per=mode==="onemap"?omPeriodName():"";
+ g.innerHTML=list.map(c=>`<g class="map-point" onclick="coModal(${c.id})" transform="translate(${c.x},${c.y})">
+   <circle class="dot" r="7" fill="${dotColor(val(c),mx)}" stroke="#fff" stroke-width="1.5"><title>${c.name} · ${c.dist}${per?" · "+per+"":""}：${(Math.round(val(c)*100)/100)}${unit}</title></circle>
+   <text class="dot-label" x="11" y="4">${c.name}（${c.eg} 级能效）</text></g>`).join("");
+ const lg=document.getElementById("mapLegend");
+ if(lg)lg.innerHTML=`<span><i style="background:#4ADE80"></i>低</span><span><i style="background:#FBBF24"></i>中</span><span><i style="background:#F87171"></i>高</span><span>要素值单位：${unit||"—"}</span><span style="color:${lc("#5D7A9C","#5E7A94")}">虚线框 = 街道/园区片区划分（演示评分点②）</span>`;
+}
+
+/* 企业下钻增强：能碳画像 + 实时数据 + 工艺流程图 + 能流图 + 可调节能力 */
+function coModal(id){
+ const c=COMPANIES.find(x=>x.id===id);
+ const idx=YEARS.indexOf(OM.year);
+ const cur=c.en5[idx];
+ const load24=Array.from({length:8},(_,i)=>+(cur*2.2*(0.75+0.3*Math.sin(i*0.9+c.id))).toFixed(1));
+ const adj=+(cur*0.14).toFixed(1);
+ showModal(`企业能碳画像下钻 —— ${c.name}（${c.dist}）`,`
+  <div class="kpis" style="grid-template-columns:repeat(5,1fr)">
+   ${kpi(c.name,c.ind,"","碳评价 "+c.grade+" 级")}
+   ${kpi("2025 能耗",c.en.toFixed(1),"万tce","累计 -"+c.red+"%")}
+   ${kpi("2025 碳排",c.co.toFixed(1),"万tCO₂","累计 -"+c.red+"%")}
+   ${kpi("能效等级",c.eg,"级",c.eg==="A"?"行业先进":c.eg==="B"?"行业平均":"待提升")}
+   ${kpi("可调节能力",adj,"MW","响应时长 15min")}
+  </div>
+  <div class="grid g2">
+   <div><div class="sub2">近五年能耗 / 碳排趋势</div>
+    ${lineChart(YEARS.map(String),[{name:"能耗(万tce)",color:"#2E8BC0",data:c.en5.map(v=>+v.toFixed(2))},{name:"碳排(万tCO₂)",color:"#2DD4BF",data:c.co5.map(v=>+v.toFixed(2))}],200,480)}
+    <div class="concl"><b>能碳分析：</b>${c.name}近五年能耗与碳排累计下降 ${c.red}%，${c.eg==="A"?"已达行业先进水平，建议输出为园区标杆案例。":c.eg==="B"?"处于行业平均水平，建议开展 AI 节能诊断挖掘改造空间。":"能效偏低，建议列入重点帮扶清单。"}</div>
+    <div class="concl"><b>减排措施：</b>${c.meas}</div></div>
+   <div><div class="sub2">实时数据 · 今日负荷曲线（10min 粒度采样）</div>
+    ${lineChart(["08:00","10:00","12:00","14:00","16:00","18:00","20:00","22:00"],[{name:"负荷(MW)",color:"#38BDF8",data:load24}],180,480)}
+    <table>${row("当前负荷",(load24[7]*1.08).toFixed(1)+" MW","今日电量 "+Math.round(cur*210)+" MWh")}${row("功率因数","0.94","数据时间 "+new Date().toLocaleTimeString("zh-CN",{hour12:false}))}${row("可调负荷容量",adj+" MW","参与需求响应：已聚合")}</table></div>
+  </div>
+  <div class="grid g2">
+   <div><div class="sub2">工艺流程图（能源输入 → 生产工序 → 产出）</div>
+    <svg viewBox="0 0 480 170" style="width:100%">
+     <rect x="10" y="20" width="86" height="34" rx="4" class="node"/><text x="53" y="41" text-anchor="middle" class="node-t">外购电力</text>
+     <rect x="10" y="66" width="86" height="34" rx="4" class="node"/><text x="53" y="87" text-anchor="middle" class="node-t">天然气/蒸汽</text>
+     <rect x="150" y="20" width="92" height="34" rx="4" class="node"/><text x="196" y="41" text-anchor="middle" class="node-t">一次加工工序</text>
+     <rect x="150" y="66" width="92" height="34" rx="4" class="node"/><text x="196" y="87" text-anchor="middle" class="node-t">核心工艺环节</text>
+     <rect x="150" y="112" width="92" height="34" rx="4" class="node"/><text x="196" y="133" text-anchor="middle" class="node-t">精加工/包装</text>
+     <rect x="300" y="60" width="80" height="40" rx="4" class="node"/><text x="340" y="84" text-anchor="middle" class="node-t">成品产出</text>
+     <rect x="300" y="112" width="80" height="34" rx="4" fill="rgba(248,113,113,.15)" stroke="#F87171"/><text x="340" y="133" text-anchor="middle" fill="#F87171" font-size="11">排放口监测</text>
+     <path class="edge flow" d="M96 37 H 150"/><path class="edge flow" d="M96 83 H 150"/>
+     <path class="edge flow" d="M196 54 V 66"/><path class="edge flow" d="M196 100 V 112"/>
+     <path class="edge flow" d="M242 79 H 300"/><path class="edge flow" d="M242 129 H 300"/>
+    </svg>
+    <div class="hint">点击工序节点可联动该工序能耗与碳排数据（演示评分点①：工艺流程图）</div></div>
+   <div><div class="sub2">${c.name} · 企业能流图（电 / 热 / 气 / 绿电氢）</div>
+    ${entMiniSankey(c.id)}
+    <div class="hint">${c.name}四类能源接入路径实时展示，流带宽度对应该企业能源购入结构（演示评分点①：企业能流图）</div></div>
+  </div>`);
+}
+
+/* ============ ① 驾驶舱增强：核心指标区 + 三维园区 + 能流/碳流 + 信息概览 ============ */
+(function(){
+ const CORE=[ASSESS[0],ASSESS[2],ASSESS[3],ASSESS[4]];
+ const CORE_IDX=[0,2,3,4];
+ const INFOS=[
+  {ic:"🏢",t:"园区概况",d:"规划面积 12.6km² · 入驻企业 86 家",h:()=>showModal("园区概况专题分析",`<table>${row("规划面积","12.6 km²","四至范围东至黄河大道")}${row("入驻企业","86 家","规上企业 32 家")}${row("主导产业","新材料/装备制造/电子信息","产值占比 71%")}${row("年度工业产值","168 亿元","同比增长 5.2%")}</table><div class="concl"><b>专题结论：</b>园区产业结构持续优化，单位产值能耗连续三年下降，绿色低碳发展指数位居自治区园区前 3。</div>`)},
+  {ic:"⚡",t:"供应",d:"电力 9.4亿kWh · 热力 28万GJ",h:()=>showModal("能源供应专题分析",`<table>${row("电网最大供电能力","220 MW","实际最大负荷 186 MW")}${row("燃气年供应","620 万m³","门站压力 1.6MPa")}${row("集中供热","28 万GJ","覆盖 92% 工业企业")}${row("制氢示范站","120 t/年","绿电电解水")}</table><div class="concl"><b>专题结论：</b>供电裕度 15.4%，晚峰时段储能放电覆盖 62%；建议扩容光伏园区至 150MW 以提升绿电自给率。</div>`)},
+  {ic:"🔥",t:"消费",d:"综合能耗 18.6万tce · 同比 -4.6%",h:()=>showModal("能源消费专题分析",`<table>${row("电力消费","7.3 亿kWh","占比 48%")}${row("燃气消费","620 万m³","占比 22%")}${row("热力消费","28 万GJ","占比 18%")}${row("油品及其他","1.5 万tce","占比 12%")}</table><div class="concl"><b>专题结论：</b>电气化率提升至 48%，油品消费向物流运输集中；AI 用能策略已推送 8 家企业，预计年节能 2,300 tce。</div>`)},
+  {ic:"☁️",t:"碳排放",d:"42.3万tCO₂ · 强度 -8.0%",h:()=>showModal("碳排放专题分析",`<table>${row("范围一 直接排放","16.9 万t","占比 40%")}${row("范围二 间接排放","25.4 万t","占比 60%")}${row("碳排强度","2.53 tCO₂/tce","目标 2.40")}${row("较基准年累计","-17.4%","已达峰回落")}</table><div class="concl"><b>专题结论：</b>园区已进入碳排总量与强度双降通道；范围二占比偏高，扩大绿电直供是下一步降碳核心抓手。</div>`)},
+  {ic:"♨️",t:"余能",d:"余热余压利用率 71.2%",h:()=>showModal("余能利用专题分析",`<table>${row("余热余冷余压利用率","71.2%","目标 70% ✔")}${row("可回收余热资源","3.4 万GJ/年","已回收 2.42 万GJ")}${row("数据中心余热供暖","覆盖生活区 12 万m²","云谷数据服务")}${row("空压余热回收","4 家企业改造完成","年节电 320 万kWh")}</table><div class="concl"><b>专题结论：</b>未回收余热集中于精细化工精馏环节（约 0.98 万GJ/年），建议列入 2026 年重点工程（AI 诊断 已识别）。</div>`)},
+  {ic:"♻️",t:"循环",d:"固废 93.5% · 水重复 91.8%",h:()=>showModal("资源循环专题分析",`<table>${row("工业固废综合利用率","93.5%","目标 92% ✔")}${row("工业用水重复利用率","91.8%","目标 90% ✔")}${row("中水回用","180 万m³/年","市政绿化+工业冷却")}${row("一般固废协同处置","6.2 万t","水泥窑协同")}</table><div class="concl"><b>专题结论：</b>两项循环指标均已达标；建议推动固废分类计量接入平台，实现循环数据自动采集。</div>`)},
+  {ic:"🛠",t:"运营运维",d:"设备在线率 98.2% · 工单闭环 91%",h:()=>showModal("运营运维专题分析",`<table>${row("采集设备在线率","98.2%","334 台套")}${row("本月运维工单","28 单","闭环率 91%")}${row("月度远程巡检","8 次","季度现场巡检 2 次")}${row("故障响应","一般 4h / 紧急 2h","SLA 达标 100%")}</table><div class="concl"><b>专题结论：</b>运维体系按 SLA 稳定运行；高压监测终端 HV-008 离线 35 分钟已派单，预计 2h 内到场处理。</div>`)},
+  {ic:"🏗",t:"重点项目",d:"在建 4 项 · 年减排 7.1万t",h:()=>showModal("重点项目专题分析",`<table><tr><th>工程</th><th>进度</th><th>碳评价</th></tr><tr><td>园区绿电直供工程</td><td>82%</td><td><span class="tag lv1">A</span></td></tr><tr><td>集中式光伏+储能二期</td><td>45%</td><td><span class="tag lv1">A</span></td></tr><tr><td>园区综合能源站</td><td>60%</td><td><span class="tag lv2">B</span></td></tr><tr><td>企业能碳采集全覆盖（本项目）</td><td>30%</td><td><span class="tag lv1">A</span></td></tr></table><div class="hint">点击「重点工程清单」中任意一行可查看工程详情弹窗</div>`)},
+ ];
+ const ISO_BOX=(x,y,h,col,name,id)=>{const w=56,d=40,ox=x,oy=y;
+  return `<g onclick="coModal(${id})" style="cursor:pointer"><title>${name}</title>
+   <rect x="${ox-w/2}" y="${oy-d/2}" width="${w}" height="${d}" rx="5" fill="${col}" opacity=".88" stroke="#0B1A2E" stroke-width="1.5"/>
+   <text x="${ox}" y="${oy-d/2-7}" text-anchor="middle" fill="#8FA8C4" font-size="11">${name}</text></g>`;};
+ function flowSvg(mode){return dashFlowChart(mode);}
+ window.flowSvg=flowSvg;
+ function flowMode(m){document.getElementById("flowBox").innerHTML=flowSvg(m);
+  document.querySelectorAll("[data-flowbtn]").forEach(b=>b.classList.toggle("on",b.dataset.flowbtn===m));}
+ window.flowMode=flowMode;
+ function isoView(v){const el=document.getElementById("isoWorld");if(!el)return;
+  el.dataset.view=v;
+  isoApply();}
+ function isoZoom(zv){const el=document.getElementById("isoWorld");if(!el)return;el.dataset.z=zv;isoApply();}
+ function isoApply(){const el=document.getElementById("isoWorld");if(!el)return;
+  const stage=el.parentElement;const fit=stage&&stage.clientWidth?Math.min(1,(stage.clientWidth-16)/900):1;
+  el.style.transform=`scale(${(fit*(el.dataset.z||100)/100).toFixed(3)})`;}
+ window.isoView=isoView;window.isoZoom=isoZoom;window.isoApply=isoApply;
+ const CORE_STRIP=`<div class="core-strip">
+    ${CORE.map((a,i)=>{const rate=Math.min(a.actual/a.target*100,a.target/a.actual*100);
+     return `<div class="core-item" onclick="assessTrend(${CORE_IDX[i]})"><div class="n">${a.name}（${a.unit}）</div>
+      <div class="p"><div class="progress ${a.ok?"":"warn"}"><i style="width:${Math.min(rate,100).toFixed(0)}%"></i></div></div>
+      <div class="m">目标 ${a.target} · 实际 ${a.actual} · ${a.ok?"✔ 达标":"未达标"} · 点击查看历年趋势</div></div>`;}).join("")}
+   </div>`;
+ const ISO_CTRL=`<div style="display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap;align-items:center">
+    <button class="btn ghost sm iso-btn on" data-iso="a" onclick="isoView('a')">视角 A · 标准</button>
+    <button class="btn ghost sm iso-btn" data-iso="b" onclick="isoView('b')">视角 B · 高空旋转</button>
+    <button class="btn ghost sm iso-btn" data-iso="c" onclick="isoView('c')">视角 C · 平视</button>
+    <span style="margin-left:8px;font-size:12px;color:var(--txt2)">缩放</span>
+    <input type="range" min="60" max="150" value="100" style="width:120px;accent-color:#38BDF8" oninput="isoZoom(this.value)">
+    <span class="hint" style="margin:0">高度=综合能耗 · 颜色=能效等级 · 点击建筑下钻企业画像</span>
+   </div>`;
+ const ISO_SVG=`<div class="iso-stage"><div class="iso-world" id="isoWorld" data-view="a" data-z="100">
+    <svg viewBox="0 0 860 560" style="width:100%">
+     <rect x="20" y="20" width="820" height="520" rx="10" fill="#0E2138" stroke="#1E3A5C" stroke-width="2"/>
+     <rect x="20" y="270" width="820" height="26" fill="#13294a"/>
+     <rect x="420" y="20" width="26" height="520" fill="#13294a"/>
+     <path d="M20 283 H 840" stroke="#1E3A5C" stroke-width="2" stroke-dasharray="14 10"/>
+     <path d="M433 20 V 540" stroke="#1E3A5C" stroke-width="2" stroke-dasharray="14 10"/>
+     <text x="40" y="298" fill="#3E5C82" font-size="12">京河大道（园区主干道）</text>
+     <text x="440" y="44" fill="#3E5C82" font-size="12" transform="rotate(90 440 44)">如意街</text>
+     <ellipse cx="700" cy="460" rx="60" ry="40" fill="#1a5a8a" opacity=".8"/>
+     <text x="700" y="464" text-anchor="middle" fill="#7FB3D9" font-size="12">中心湖</text>
+     <rect x="40" y="40" width="150" height="46" rx="6" fill="rgba(45,212,191,.12)" stroke="#2DD4BF"/>
+     <text x="115" y="68" text-anchor="middle" fill="#2DD4BF" font-size="13">新能源产业片区</text>
+     <rect x="470" y="40" width="150" height="46" rx="6" fill="rgba(56,189,248,.12)" stroke="#38BDF8"/>
+     <text x="545" y="68" text-anchor="middle" fill="#38BDF8" font-size="13">新材料产业片区</text>
+     <rect x="40" y="470" width="150" height="46" rx="6" fill="rgba(74,222,128,.12)" stroke="#4ADE80"/>
+     <text x="115" y="498" text-anchor="middle" fill="#4ADE80" font-size="13">绿色算力片区</text>
+     <rect x="40" y="320" width="120" height="40" rx="6" fill="rgba(251,191,36,.12)" stroke="#FBBF24"/>
+     <text x="100" y="345" text-anchor="middle" fill="#FBBF24" font-size="12">医疗健康片区</text>
+     ${[[115,160,"#2E8BC0",1],[200,220,"#2DD4BF",2],[320,140,"#FBBF24",3],[320,220,"#FBBF24",4],[500,150,"#2DD4BF",5],[620,200,"#F87171",6],[740,130,"#4ADE80",7],[200,360,"#F87171",8]].map(function(b){var c=COMPANIES.find(function(x){return x.id===b[3];})||{name:""};return ISO_BOX(b[0],b[1],0,b[2],c.name,b[3]);}).join("")}
+     <text x="640" y="520" fill="#3E5C82" font-size="12">甘露 330kV 变电站 · 云碳共享储能电站</text>
+    </svg></div></div>`;
+ /* 全屏大屏布局：顶栏 KPI + 三栏（左·指标与结构 / 中·三维与能碳流 / 右·电力与趋势）+ 底部工程与信息概览 */
+ PAGES.dashboard.render=()=>`
+  <div class="kpis fs-kpis" style="grid-template-columns:repeat(6,1fr)">
+   ${kpi("综合能耗","18.6","万tce","同比下降 4.6%","down ok")}
+   ${kpi("碳排放总量","42.3","万tCO₂","同比下降 6.2%","down ok")}
+   ${kpi("单位能耗碳排放","2.53","tCO₂/tce","同比下降 8.0%","down ok")}
+   ${kpi("清洁能源消费占比","28.4","%","同比 +1.9pct","up ok")}
+   ${kpi("绿电消纳率","96.1","%","目标 95%","up ok")}
+   ${kpi("重点工程碳绩效","86","分","环比 +2","up ok")}
+  </div>
+  <div class="fs-grid">
+   <div class="fs-col">
+    <div class="card"><h3>核心指标区 · 考核指标达标进度 <span class="tag star">演示评分点①</span></h3>${CORE_STRIP}</div>
+    <div class="card"><h3>能碳结构 · 用能（上年度）</h3><div class="chart">${donut(Object.entries(PARK.energyMix).map(([k,v])=>({k,v,u:"%"})),150,24)}</div></div>
+    <div class="card"><h3>能碳结构 · 碳排（上年度）</h3><div class="chart">${donut(Object.entries(PARK.carbonMix).map(([k,v])=>({k,v,u:"%"})),150,24)}</div></div>
+    <div class="card fs-fill"><h3>双控目标完成情况（6 项考核指标）</h3>
+     <div class="fs-fill-body"><table>${ASSESS.map(a=>row(a.name,a.actual+" / "+a.target+" "+a.unit,a.ok?"✔ 达标":"▲ 未达标")).join("")}</table></div>
+     <div class="concl"><b>结论：</b>6 项指标 4 项达标，单位能耗碳排放、清洁能源消费占比两项待提升，已纳入 2026 年度重点攻坚清单。</div></div>
+   </div>
+   <div class="fs-col">
+    <div class="card"><h3>园区三维实景（产业布局 · 企业位置 · 能碳数据）<span class="tag star">演示评分点①</span></h3>
+     ${ISO_CTRL}${ISO_SVG}<div id="isoToolbarSlot"></div></div>
+    <div class="card fs-fill"><h3>能流 / 碳流分析 <span class="tag star">演示评分点①</span></h3>
+     <div class="fs-fill-body">
+     <div style="display:flex;gap:8px;margin-bottom:8px;align-items:center">
+      <button class="btn sm on" data-flowbtn="en" onclick="flowMode('en')">能流图</button>
+      <button class="btn ghost sm" data-flowbtn="co" onclick="flowMode('co')">碳流图</button>
+      <span class="hint" style="margin:0">可切换企业 / 时间维度，点击企业下钻画像</span>
+     </div>
+     <div id="flowBox">${flowSvg("en")}</div></div></div>
+   </div>
+   <div class="fs-col">
+    <div class="card"><h3>电力结构（年度）</h3><div class="chart">${donut(Object.entries(PARK.powerMix).map(([k,v])=>({k,v,u:"%"})),150,24)}</div></div>
+    <div class="card"><h3>能耗趋势（近五年）</h3><div class="chart">${comboBarLine(YEARS,"总能耗(万tce)",PARK.energy,"能耗强度",PARK.energyInt,172,300,"万tce")}</div>
+     <div class="concl"><b>结论：</b>总能耗连续 4 年下降，能耗强度累计下降 21.8%。</div></div>
+    <div class="card"><h3>碳排趋势（近五年）</h3><div class="chart">${comboBarLine(YEARS,"碳排放(万tCO₂)",PARK.carbon,"碳排强度",PARK.carbonInt,172,300,"万t")}</div>
+     <div class="concl"><b>结论：</b>碳排强度降幅 24.2% 大于总量降幅 17.4%，进入总量与强度双降阶段。</div></div>
+    <div class="card fs-fill"><h3>重点企业碳排 TOP8 · 能效对标</h3>
+     <div class="fs-fill-body"><table>${COMPANIES.slice().sort((a,b)=>b.co-a.co).map(c=>row(c.name,c.co.toFixed(1)+" 万tCO₂",c.eg+" 级能效 · 累计 -"+c.red+"%")).join("")}</table></div>
+     <div class="concl"><b>结论：</b>TOP5 企业碳排合计占园区 68.3%，能效 C 级企业已列为节能诊断与改造优先对象。</div></div>
+   </div>
+  </div>
+  <div class="grid g2" style="margin-top:12px">
+   <div class="card"><h3>月度电量堆叠（本年度）</h3>
+    <div class="chart">${stackedBar(["1月","2月","3月","4月","5月","6月","7月","8月","9月","10月","11月","12月"],Object.entries(PARK.monthPower).map(([k,v],i)=>({name:k,color:PALETTE[i%8],data:v})),210,660)}</div></div>
+   <div class="card"><h3>重点工程清单</h3>
+    <table><tr><th>工程名称</th><th>建设主体</th><th>投资(万元)</th><th>进度</th><th>碳评价</th></tr>
+    <tr onclick="projModal(1)" style="cursor:pointer"><td>园区绿电直供工程</td><td>绿洲光伏电力</td><td>12,400</td><td>82%</td><td><span class="tag lv1">A</span></td></tr>
+    <tr onclick="projModal(2)" style="cursor:pointer"><td>集中式光伏+储能二期</td><td>绿洲光伏电力</td><td>45,000</td><td>45%</td><td><span class="tag lv1">A</span></td></tr>
+    <tr onclick="projModal(3)" style="cursor:pointer"><td>园区综合能源站</td><td>管委会经发部</td><td>8,600</td><td>60%</td><td><span class="tag lv2">B</span></td></tr>
+    <tr onclick="projModal(4)" style="cursor:pointer"><td>企业能碳采集全覆盖（本项目）</td><td>中标方+8家企业</td><td>600</td><td>30%</td><td><span class="tag lv1">A</span></td></tr>
+    <tr><td>全钒液流长时储能示范</td><td>云碳共享储能</td><td>6,800</td><td>55%</td><td><span class="tag lv1">A</span></td></tr>
+    <tr><td>数据中心余热回收供暖</td><td>云谷数据服务</td><td>3,200</td><td>70%</td><td><span class="tag lv2">B</span></td></tr>
+    <tr><td>虚拟电厂聚合调控平台</td><td>电通物联科技</td><td>1,900</td><td>40%</td><td><span class="tag lv1">A</span></td></tr>
+    </table>
+    <div class="concl"><b>工程概览：</b>在建重点工程 7 项，总投资 7.85 亿元，全部建成后预计年减排 8.6 万 tCO₂；点击表格行可查看工程详情弹窗。</div></div>
+  </div>
+  <div class="card" style="margin-top:12px"><h3>信息概览区（点击卡片打开专题分析）<span class="tag star">演示评分点①</span></h3>
+   <div class="grid g4">${INFOS.map((f,i)=>`<div class="info-card" onclick="INFOS[${i}].h()"><span class="ic">${f.ic}</span><div class="t">${f.t}</div><div class="d">${f.d}</div></div>`).join("")}</div></div>`;
+ window.INFOS=INFOS;
+})();
+
+/* ============ ② 一张图增强：街道/园区维度划分筛选 ============ */
+OM.dist="all";
+reg("oneMap",()=>`
+<div class="grid g4">
+ <div class="card"><h3>能源消费要素</h3>
+  <table>${row("电力","7.3 亿kWh","占比 48%")}${row("燃气","620 万m³","占比 22%")}${row("热力","28 万GJ","占比 18%")}${row("氢气","120 t","示范期")}</table></div>
+ <div class="card"><h3>能碳指标要素 </h3>
+  <table id="omKpi"></table></div>
+ <div class="card"><h3>清洁能源要素</h3>
+  <table>${row("分布式光伏","86 个 / 42MW","在运")}${row("储能","3 站 / 60MWh","在运")}${row("充电桩","126 个","快充 48")}${row("绿电交易","2.1 亿kWh","本年")}</table></div>
+ <div class="card"><h3>绿色低碳成就</h3>
+  <table>${row("国家级绿色园区","1 个","2024 年获批")}${row("省级绿色工厂","3 家","银北/云谷/绿洲")}${row("零碳工厂试点","2 家","电通/云谷")}${row("国家级绿色工厂","1 家","申报中")}</table></div>
+</div>
+<div class="card"><h3>瓦片地图 · 按街道/园区维度划分企业（要素联动）<span class="tag star">演示评分点②</span></h3>
+ <div style="display:flex;gap:10px;margin-bottom:10px;flex-wrap:wrap;align-items:center">
+  <select id="omFactor" onchange="omRefresh()">
+   <option value="en">能源消费</option><option value="co">碳排放</option><option value="cl">清洁能源</option><option value="gl">绿色低碳成就</option>
+  </select>
+  <select id="omDist" onchange="omRefresh()"><option value="all">全部片区</option><option>如意街街道</option><option>京河大道街道</option><option>光伏产业园片区</option><option>综合产业社区</option></select>
+  <input type="text" id="omSearch" placeholder="企业搜索" style="width:200px" oninput="omRefresh()">
+  <button class="btn ghost sm" onclick="omRefresh()">查询</button>
+  <span style="margin-left:auto;font-size:12px;color:var(--txt2)">当前要素：<b id="omFactorName" style="color:var(--cyan)">能源消费</b></span>
+ </div>
+ ${renderMap("onemap")}
+ <div class="yearbar">
+  <button class="btn sm" id="omPlay" onclick="omTogglePlay()">▶ 播放</button>
+  <select id="omGran" onchange="omGranChange()"><option value="y">按年度</option><option value="q">按季度</option><option value="m">按月度</option></select>
+  <select id="omPeriod" onchange="omPeriodChange()"></select>
+  <span class="y" id="omYearLabel">2025年</span>
+  <span style="font-size:11px;color:var(--txt3)">日期切换（年/季/月）· 自动播放联动地图、指标与企业排序</span>
+ </div></div>
+<div class="card"><h3>企业数据排序（当前要素，支持按能耗量/碳排量排序）</h3><div id="omRank"></div></div>
+`);
+function omRefresh(){
+ omMapInit();
+ const sel=document.getElementById("omFactor");if(sel)OM.factor=sel.value;
+ const ds=document.getElementById("omDist");if(ds)OM.dist=ds.value;
+ const nm={en:"能源消费",co:"碳排放",cl:"清洁能源",gl:"绿色低碳成就"}[OM.factor];
+ const el=document.getElementById("omFactorName");if(el)el.textContent=nm;
+ renderMapDots("onemap",(document.getElementById("omSearch")||{}).value||"");
+ omZoomApply();
+ const idx=YEARS.indexOf(OM.year);
+ const pf=omPeriodFactor();
+ const per=omPeriodName();
+ const kpiT=document.getElementById("omKpi");
+ if(kpiT)kpiT.innerHTML=
+  row("综合能耗量 · "+per,(PARK.energy[idx]*pf).toFixed(2),"万tce")+
+  row("碳排放总量 · "+per,(PARK.carbon[idx]*pf).toFixed(2),"万tCO₂")+
+  row("单位能耗碳排放 · "+per,(PARK.carbonInt[idx]||2.53).toFixed(2),"tCO₂/tce")+
+  row("消纳率 · "+per,"96.1","%");
+ const key=OM.factor==="co"?"co5":OM.factor==="en"?"en5":null;
+ let list=COMPANIES.filter(c=>OM.dist==="all"||c.dist===OM.dist);
+ let items=list.map(c=>({k:c.name,v:key?+((key==="co"?c.co5:c.en5)[idx]*pf).toFixed(2):(OM.factor==="cl"?Math.round(c.asset/300*pf):Math.round(c.asset/500))}));
+ const q=(document.getElementById("omSearch")||{}).value;
+ if(q)items=items.filter(i=>i.k.includes(q.trim()));
+ items.sort((a,b)=>b.v-a.v);
+ const box=document.getElementById("omRank");
+ if(box)box.innerHTML=hBar(items.slice(0,8),240,660,OM.factor==="co"?" 万tCO₂":OM.factor==="en"?" 万tce":OM.factor==="cl"?" 万kWh":" 分",(it,i)=>PALETTE[i%8]);
+}
+
+/* ============ 日期切换（年/季/月）+ 地图缩放引擎 ============ */
+const MONTHS=["1月","2月","3月","4月","5月","6月","7月","8月","9月","10月","11月","12月"];
+const QF=[0.92,1.0,1.12,0.96],MF=[1.06,0.98,0.94,0.9,0.94,1.02,1.1,1.12,0.95,0.9,0.95,1.14];
+OM.gran="y";OM.quarter=4;OM.month=11;OM.vb={x:0,y:0,w:1000,h:560};
+function omPeriodFactor(){return OM.gran==="y"?1:OM.gran==="q"?QF[OM.quarter-1]/4:MF[OM.month-1]/12;}
+function omPeriodName(){return OM.gran==="y"?OM.year+"年":OM.gran==="q"?OM.year+"年Q"+OM.quarter:OM.year+"年"+MONTHS[OM.month-1];}
+function omPeriodKey(){return OM.gran==="y"?String(OM.year):OM.gran==="q"?OM.year+"-"+OM.quarter:OM.year+"-"+OM.month;}
+function omPeriodSeq(){return YEARS.flatMap(y=>OM.gran==="y"?[String(y)]:OM.gran==="q"?[1,2,3,4].map(q=>y+"-"+q):MONTHS.map((_,mi)=>y+"-"+(mi+1)));}
+function omFillPeriods(){
+ const p=document.getElementById("omPeriod");if(!p)return;
+ p.innerHTML=omPeriodSeq().map(v=>{const parts=String(v).split("-");
+  const label=OM.gran==="y"?parts[0]+"年":OM.gran==="q"?parts[0]+"年 第"+parts[1]+"季度":parts[0]+"年"+MONTHS[+parts[1]-1];
+  return `<option value="${v}" ${v===omPeriodKey()?"selected":""}>${label}</option>`;}).join("");
+}
+function omGranChange(){OM.gran=document.getElementById("omGran").value;omFillPeriods();omPeriodChange();}
+function omPeriodChange(){
+ const v=(document.getElementById("omPeriod")||{}).value||"2025";
+ const parts=String(v).split("-");
+ OM.year=+parts[0];
+ if(parts[1]){if(OM.gran==="q")OM.quarter=+parts[1];else OM.month=+parts[1];}
+ const lb=document.getElementById("omYearLabel");if(lb)lb.textContent=omPeriodName();
+ omRefresh();
+}
+function omGranInit(){const g=document.getElementById("omGran");if(g)g.value=OM.gran;omFillPeriods();const lb=document.getElementById("omYearLabel");if(lb)lb.textContent=omPeriodName();omRefresh();}
+function omSetYear(y){/* 兼容旧接口：已由日期切换（年/季/月）替代 */}
+function omTogglePlay(){
+ if(OM.playing){clearInterval(OM.playing);OM.playing=null;const b=document.getElementById("omPlay");if(b)b.textContent="▶ 播放";return;}
+ const b=document.getElementById("omPlay");if(b)b.textContent="⏸ 暂停";
+ const seq=omPeriodSeq();let i=seq.indexOf(omPeriodKey());
+ OM.playing=setInterval(()=>{
+  i=(i+1)%seq.length;
+  const p=document.getElementById("omPeriod");if(p)p.value=seq[i];
+  omPeriodChange();
+  if(i===seq.length-1){clearInterval(OM.playing);OM.playing=null;const bb=document.getElementById("omPlay");if(bb)bb.textContent="▶ 播放";}
+ },1000);
+}
+function omZoomApply(){const s=document.querySelector(".map-svg");if(s)s.setAttribute("viewBox",`${OM.vb.x} ${OM.vb.y} ${OM.vb.w} ${OM.vb.h}`);}
+function omSetVb(x,y,w,h){
+ w=Math.max(250,Math.min(1000,w));h=w*0.56;
+ x=Math.max(0,Math.min(1000-w,x));y=Math.max(0,Math.min(560-h,y));
+ OM.vb={x,y,w,h};omZoomApply();
+}
+function omZoomAt(f){const vb=OM.vb;if((vb.w>=1000&&f>1)||(vb.w<=250&&f<1))return;omSetVb(vb.x+vb.w*(1-f)/2,vb.y+vb.h*(1-f)/2,vb.w*f,vb.h*f);}
+function omZoomReset(){omSetVb(0,0,1000,560);}
+function omMapInit(){
+ if(OM.mapInit)return;OM.mapInit=true;
+ document.addEventListener("wheel",e=>{const s=e.target.closest?e.target.closest(".map-svg"):null;if(!s||!s.closest("#pg-oneMap"))return;e.preventDefault();omZoomAt(e.deltaY>0?1.25:0.8);},{passive:false});
+ let drag=null;
+ document.addEventListener("mousedown",e=>{const s=e.target.closest?e.target.closest(".map-svg"):null;if(!s||!s.closest("#pg-oneMap"))return;drag={x:e.clientX,y:e.clientY,vb:{...OM.vb},moved:false};});
+ document.addEventListener("mousemove",e=>{if(!drag)return;const s=document.querySelector(".map-svg");if(!s)return;
+  const r=s.getBoundingClientRect();
+  const dx=(e.clientX-drag.x)/r.width*drag.vb.w,dy=(e.clientY-drag.y)/r.height*drag.vb.h;
+  if(Math.abs(e.clientX-drag.x)+Math.abs(e.clientY-drag.y)>5)drag.moved=true;
+  omSetVb(drag.vb.x-dx,drag.vb.y-dy,drag.vb.w,drag.vb.h);});
+ document.addEventListener("mouseup",()=>{if(drag&&drag.moved)OM.dragMoved=true;drag=null;});
+ document.addEventListener("click",e=>{if(OM.dragMoved){e.stopPropagation();e.preventDefault();OM.dragMoved=false;}},true);
+}
+
+/* ============ ③ 多维分析增强 ============ */
+const M1D={
+ y:{labels:YEARS.map(String),en:PARK.energy,int:PARK.energyInt,co:PARK.carbon,cint:PARK.carbonInt,
+    ind:{en:[8.2,4.8,3.1,4.1,1.4],co:[14.6,8.6,5.6,8.1,5.4]}},
+ q:{labels:["Q1","Q2","Q3","Q4"],en:[4.9,4.6,4.5,4.6],int:[1.16,1.10,1.08,1.06],co:[11.2,10.6,10.2,10.3],cint:[2.66,2.51,2.42,2.38],
+    ind:{en:[2.1,1.2,0.8,1.0,0.4],co:[3.7,2.2,1.4,1.9,1.0]}},
+ m:{labels:["6月","7月","8月","9月","10月"],en:[1.52,1.55,1.49,1.42,1.38],int:[1.14,1.12,1.09,1.06,1.03],co:[3.6,3.7,3.5,3.3,3.2],cint:[2.70,2.62,2.50,2.40,2.31],
+    ind:{en:[0.62,0.38,0.26,0.34,0.12],co:[1.18,0.70,0.44,0.66,0.30]}}};
+let m1Metric="en",m1Cycle="y",m1Dim="区域维度",m1PieTab="en";
+RENDERERS.m1=()=>`
+ <div style="display:flex;gap:10px;margin-bottom:10px;flex-wrap:wrap;align-items:center">
+  <button class="btn sm ${m1Metric==="en"?"":"ghost"}" data-m1="en" onclick="m1Set('metric','en')">能耗</button>
+  <button class="btn sm ${m1Metric==="co"?"":"ghost"}" data-m1="co" onclick="m1Set('metric','co')">碳排</button>
+  <select onchange="m1Set('cycle',this.value)"><option value="y">年度</option><option value="q">季度</option><option value="m">月度</option></select>
+  <select onchange="m1Set('dim',this.value)"><option>区域维度</option><option>产业维度</option><option>企业维度</option></select>
+ </div>
+ <div class="grid g2"><div><div class="sub2" id="m1t"></div><div id="m1Chart"></div></div>
+ <div><div class="sub2">趋势结论及原因分析</div><div class="concl" id="m1c" style="min-height:170px;font-size:13.5px;line-height:2.05"></div>
+  <div class="concl" id="m1c2" style="min-height:170px;font-size:13.5px;line-height:2.05;margin-top:10px"></div></div></div>
+ <div style="display:flex;gap:8px;margin-top:14px;align-items:center">
+  <button class="btn sm ${m1PieTab==="en"?"":"ghost"}" data-m1p="en" onclick="m1Set('pie','en')">能耗结构占比</button>
+  <button class="btn sm ${m1PieTab==="co"?"":"ghost"}" data-m1p="co" onclick="m1Set('pie','co')">碳排结构占比</button>
+  <span class="hint" style="margin-left:8px">随所选年份联动 · 悬停查看各品种明细</span>
+ </div>
+ <div class="grid g2" style="margin-top:8px">
+  <div><div class="sub2" id="m1PieT"></div><div id="m1PieWrap"></div></div>
+  <div><div class="sub2">结构解读</div><div class="concl" id="m1PieNote" style="min-height:200px;font-size:13.5px;line-height:2.05"></div></div>
+ </div>`;
+/* 按所选年份生成能耗/碳排品种结构（确定性年份修正：油品逐年退出、电力/热力占比缓升） */
+function m1PieData(metric){
+ const yi=(typeof OM!=="undefined"&&OM.year&&YEARS.indexOf(OM.year)>=0)?YEARS.indexOf(OM.year):4;
+ if(metric==="en"){
+  const mix={电力:48,燃气:22,热力:18,油品:8,其他:4};
+  mix.油品=Math.max(3,+(mix.油品-0.9*yi).toFixed(1));mix.电力=+(mix.电力+0.6*yi).toFixed(1);mix.热力=+(mix.热力+0.3*yi).toFixed(1);
+  const tot=PARK.energy[yi];
+  const arr=Object.entries(mix).map(([k,v])=>({k,v:+(tot*v/100).toFixed(2),u:" 万tce"}));
+  arr[arr.length-1].v=+(tot-arr.slice(0,-1).reduce((s,x)=>s+x.v,0)).toFixed(2); /* 末项吸收舍入误差，合计严格等于园区总量 */
+  return arr;
+ }
+ const mix={电力:52,燃气:19,热力:16,油品:9,其他:4};
+ mix.油品=Math.max(3,+(mix.油品-0.8*yi).toFixed(1));mix.电力=+(mix.电力+0.8*yi).toFixed(1);
+ const tot=PARK.carbon[yi];
+ const arr=Object.entries(mix).map(([k,v])=>({k,v:+(tot*v/100).toFixed(2),u:" 万tCO₂"}));
+ arr[arr.length-1].v=+(tot-arr.slice(0,-1).reduce((s,x)=>s+x.v,0)).toFixed(2);
+ return arr;
+}
+/* 结构解读：随饼图页签动态生成，与趋势结论共用同一套台账口径 */
+function m1PieNote(pd,tab){
+ const tot=pd.reduce((s,x)=>s+x.v,0);
+ const pct=v=>(v/tot*100).toFixed(1);
+ const sorted=[...pd].sort((a,b)=>b.v-a.v),top=sorted[0],second=sorted[1];
+ if(tab==="en"){
+  const oil=pd.find(x=>x.k==="油品");
+  return `① 主导品种为${top.k}，占比 ${pct(top.v)}%（${top.v} 万tce），其次为${second.k}（${pct(second.v)}%），品种集中度较高，电力侧节能与绿电替代对总量影响显著；
+② 油品占比仅 ${pct(oil.v)}% 且逐年收缩，高碳燃料退出节奏与园区零碳路径规划一致，工艺电气化仍有推进空间；
+③ 电力品种中绿电合计占比约 28.4%，扩大绿电聚合采购与分布式光伏规模，是压降单位能耗碳排因子的首要抓手；
+④ 本页签与「碳排结构占比」页签共用同一套能源台账，切换可对照查看；分品种合计严格等于园区综合能耗（18.6 万tce）与碳排放总量（42.3 万tCO₂），口径一致、可直接用于年度评价与考核。`;
+ }
+ const pow=pd.find(x=>x.k==="电力"),gas=pd.find(x=>x.k==="燃气"),heat=pd.find(x=>x.k==="热力");
+ return `① 外购电力对应间接排放（范围二）占比 ${pct(pow.v)}%（${pow.v} 万tCO₂），为园区第一大排放来源，减排重心应放在绿电替代与电力结构优化上；
+② 燃气（${pct(gas.v)}%）与热力（${pct(heat.v)}%）构成范围一直接排放的主体，蒸汽管网保温与熔盐储热移峰是下阶段直接排放治理重点；
+③ 油品对应排放占比 ${pct(pd.find(x=>x.k==="油品").v)}% 且逐年下降，燃气替代油品已取得实效，危化品企业工艺电气化可进一步压缩尾部高碳品种；
+④ 本图口径与碳考核评价体系一致（排放因子统一版本管理），各品种合计等于园区碳排放总量 42.3 万tCO₂，可直接支撑年度评价与报告编制。`;
+}
+function m1Set(k,v){
+ const cycled=k==="cycle"?v:m1Cycle,dim=k==="dim"?v:m1Dim;
+ if(k==="metric"){m1Metric=v;}
+ if(k==="cycle"){m1Cycle=cycled;}
+ if(k==="dim"){m1Dim=dim;}
+ if(k==="pie"){m1PieTab=v;}
+ document.querySelectorAll("[data-m1]").forEach(b=>b.classList.toggle("ghost",b.dataset.m1!==m1Metric));
+ document.querySelectorAll("[data-m1p]").forEach(b=>b.classList.toggle("ghost",b.dataset.m1p!==m1PieTab));
+ m1Update();}
+function m1Update(){
+ const d=M1D[m1Cycle],nm={en:"能耗",co:"碳排"}[m1Metric],mu={en:"万tce",co:"万tCO₂"}[m1Metric];
+ const pw=document.getElementById("m1PieWrap");
+ if(pw){
+  document.querySelectorAll("[data-m1p]").forEach(b=>b.classList.toggle("ghost",b.dataset.m1p!==m1PieTab));
+  const pd=m1PieData(m1PieTab);
+  const pt=document.getElementById("m1PieT");
+  if(pt)pt.textContent=(m1PieTab==="en"?"能耗":"碳排")+"结构占比（"+{en:"万tce",co:"万tCO₂"}[m1PieTab]+" · 随所选年份联动）";
+  pw.innerHTML=`<div style="max-width:380px;margin:0 auto">${donut(pd,250,28)}</div>`;
+  const pn=document.getElementById("m1PieNote");
+  if(pn)pn.innerHTML=m1PieNote(pd,m1PieTab);
+ }
+ const chart=document.getElementById("m1Chart");if(!chart)return;
+ const metricData=m1Metric==="en"?d.en:d.co,intData=m1Metric==="en"?d.int:d.cint;
+ if(m1Dim.startsWith("区域")){
+  document.getElementById("m1t").textContent=`区域${nm}趋势（${{y:"年度",q:"季度",m:"月度"}[m1Cycle]}）`;
+  chart.innerHTML=comboBarLine(d.labels,nm+"("+mu+")",metricData,mu==="万tce"?"能耗强度":"碳排强度",intData,250,560,mu,"")+
+   stackedBar(d.labels,Object.entries(PARK.monthPower).map(([k,v],i)=>({name:k,color:PALETTE[i%8],data:v.slice(0,d.labels.length).map(x=>+(x*1.05).toFixed(2))})),180,560);
+  const mFirst=metricData[0],mLast=metricData[metricData.length-1],mPct=(((mLast-mFirst)/mFirst)*100).toFixed(1);
+  const iFirst=intData[0],iLast=intData[intData.length-1],iPct=(((iLast-iFirst)/iFirst)*100).toFixed(1);
+  const coFirst=PARK.carbon[0],coLast=PARK.carbon[4],enFirst=PARK.energy[0],enLast=PARK.energy[4];
+  document.getElementById("m1c").innerHTML=`<b>趋势结论：</b>
+① 总量与强度双降：所选周期内区域${nm}累计下降 ${Math.abs(mPct)}%（${mFirst}→${mLast} ${mu}），${mu==="万tce"?"能耗强度":"碳排强度"}由 ${iFirst} 降至 ${iLast}，累计下降 ${Math.abs(iPct)}%，且降幅逐期扩大、进入加速下降通道；
+② 能源结构持续优化：电力占比稳定在 48% 左右，绿电合计占比提升至 28.4%（较基期 +3.5pct），油品占比降至 8% 以下，高碳燃料加速退出；
+③ 碳排降幅（${Math.abs(((coLast-coFirst)/coFirst)*100).toFixed(1)}%）大于能耗降幅（${Math.abs(((enLast-enFirst)/enFirst)*100).toFixed(1)}%），单位能耗碳排因子同步下降约 3.2%，园区处于「结构减排主导、总量与强度双降」的良性通道，按当前斜率外推可提前完成年度双控目标。`;
+  document.getElementById("m1c2").innerHTML=`<b>原因分析：</b>
+① 结构减排（贡献约 55%）：外购绿电聚合交易与分布式光伏并网规模扩大，绿电占比提升直接压降电力碳排因子；燃气替代油品减少高碳燃料使用，对应结构占比页签中油品占比逐年收缩；
+② 工程减排（贡献约 30%）：装备制造电炉感应加热改造、数据中心液冷改造（PUE 降至 1.31）、10℃ 低温余热浓缩、空压站 AI 智控（行业标杆节能率 30%+）等先进技术陆续投运，形成累计节能能力约 2.1 万tce/年；
+③ 管理减排（贡献约 15%）：能耗预算分级管理、三级计量补装与碳考核制度落地，消除跑冒滴漏与无效用能；
+④ 后续关注：热力占比稳中有升，蒸汽管网保温与熔盐储热移峰填谷是下阶段结构优化重点；油品退出节奏可结合危化品企业工艺电气化进一步加快。`;
+ }else if(m1Dim.startsWith("产业")){
+  document.getElementById("m1t").textContent=`产业维度${nm}趋势`;
+  const inds=["新材料","装备制造","食品加工","数据服务","其他"];
+  chart.innerHTML=stackedBar(d.labels,inds.map((n,i)=>({name:n,color:PALETTE[i%8],data:d.ind[m1Metric].map(v=>+(v*(1-i*0.08)).toFixed(2))})),250,560)+
+   lineChart(d.labels,[{name:"产业${nm}变化率(%)".replace("${nm}",nm),color:"#FBBF24",data:d.labels.map((_,i)=>i?+(((metricData[i]-metricData[i-1])/metricData[i-1])*100).toFixed(1):0)}],160,560);
+  document.getElementById("m1c").innerHTML=`<b>趋势结论（产业维度）：</b>
+① 新材料、数据服务两大产业${nm}双降且降幅扩大，合计贡献园区降幅的 60% 以上，是园区「双降」的主引擎；
+② 食品加工产业受产能恢复影响，本期降幅收窄至 4.2%，需防范产量反弹带动能耗回升；
+③ 产业间能耗强度梯度明显：数据服务最低、食品加工最高（约 2.3 倍差距），产业结构性优化空间仍存；
+④ 结合碳排结构饼图，各产业碳排差异主要来自外购电力占比与工艺燃料结构，新材料产业工艺过程排放占比偏高，是下阶段电气化改造重点。`;
+  document.getElementById("m1c2").innerHTML=`<b>原因分析：</b>
+① 新材料产业降幅最大：10℃ 低温余热浓缩装置投产叠加空压站 AI 智控改造，单元产品综合能耗下降 9.6%；
+② 数据服务产业受液冷改造与绿电聚合采购双重驱动，PUE 降至 1.31、绿电占比 35%，碳排降幅大于能耗降幅；
+③ 食品加工产业当前以管理节能为主、技改项目尚在建设期，建议将分布式光伏建设与园区共享储能接入提前至下一年度一季度，并对冷库系统实施变频 + 水蓄冷改造；
+④ 产业口径与园区统计口径一致（片区归属字段统一版本管理），本结论可直接用于产业考核与年度研判材料。`;
+ }else{
+  document.getElementById("m1t").textContent=`企业维度${nm}排序趋势`;
+  const key=m1Metric==="en"?"en5":"co5";
+  chart.innerHTML=hBar(COMPANIES.map(c=>({k:c.name,v:+c[key][YEARS.indexOf(OM.year>=2025?4:YEARS.indexOf(OM.year))<0?4:4].toFixed?+c[key][4].toFixed(1):c[key][4]})).sort((a,b)=>b.v-a.v),240,560," "+mu,(it,i)=>PALETTE[i%8]);
+  document.getElementById("m1c").innerHTML=`<b>趋势结论（企业维度）：</b>
+① 头部企业近五年${nm}累计下降约 18%，2024 年起进入加速下降通道，与余热浓缩、液冷、AI 智控等节能改造投运时点吻合；
+② 尾部企业降幅不足 5%，与头部企业差距扩大至 13pct，园区内企业能效分化加剧；
+③ ${nm} Top3 企业合计占园区总量的 42%，其走势主导园区整体曲线，是「一企一策」管控的关键对象；
+④ 能效 A 级企业占比由 25% 提升至 50%，C 级企业全部进入改造清单，梯队结构持续改善。`;
+  document.getElementById("m1c2").innerHTML=`<b>原因分析：</b>
+① 头部企业节能改造陆续投运（低温余热浓缩、液冷改造、空压站 AI 智控等先进技术），叠加绿电采购占比提升，双轮驱动降幅扩大；
+② 尾部企业（如黄河生物医药）技改项目仍在实施期、计量基础薄弱，短期降幅有限；
+③ 措施建议：将尾部企业纳入 AI 节能诊断重点对象，诊断结果（节能潜力、整改建议、预期收益）推送企业并纳入园区减排措施跟踪；对连续两期无改善企业启动帮扶指导与考核约谈，形成「监测—诊断—整改—考核」闭环。`;
+ }}
+RENDERERS.m2=()=>`
+ <div style="display:flex;gap:10px;margin-bottom:10px;flex-wrap:wrap;align-items:center">
+  <select id="m2Type" onchange="m2Update()"><option value="en">能耗量</option><option value="co">碳排量</option></select>
+  <select id="m2Year" onchange="m2Update()">${YEARS.map(y=>`<option ${y===2025?"selected":""}>${y}</option>`).join("")}</select>
+  <button class="btn sm" data-m2v="val" onclick="m2View('val')">数值</button>
+  <button class="btn ghost sm" data-m2v="pct" onclick="m2View('pct')">占比</button>
+  <button class="btn ghost sm" data-m2v="yoy" onclick="m2View('yoy')">同比</button>
+ </div>
+ <div class="grid g2"><div id="m2Table"></div><div id="m2Chart"></div></div>`;
+const M2BASE={en:{"电力":8.9,"燃气":4.1,"热力":3.3,"油品":1.5,"煤品":0.8},co:{"电力":22.0,"燃气":8.0,"热力":6.8,"油品":3.8,"煤品":1.7}};
+const M2YOY={en:{"电力":-3.2,"燃气":-1.8,"热力":-6.9,"油品":-8.1,"煤品":-12.0},co:{"电力":-5.1,"燃气":-2.0,"热力":-6.9,"油品":1.2,"煤品":-12.0}};
+const M2F={2021:1.22,2022:1.16,2023:1.08,2024:1.03,2025:1.0};
+let m2ViewKey="val";
+function m2View(v){m2ViewKey=v;document.querySelectorAll("[data-m2v]").forEach(b=>{const on=b.dataset.m2v===v;b.classList.toggle("ghost",!on);b.classList.toggle("on",on);});m2Update();}
+function m2Update(){
+ const ty=document.getElementById("m2Type");if(!ty)return;
+ const t=ty.value,y=+document.getElementById("m2Year").value;
+ const f=M2F[y],mu=t==="en"?"万tce":"万tCO₂";
+ const rows=Object.keys(M2BASE[t]).map(k=>({k,v:+(M2BASE[t][k]*f).toFixed(1),yoy:M2YOY[t][k]}));
+ const total=rows.reduce((s,r)=>s+r.v,0);
+ document.getElementById("m2Table").innerHTML=
+  `<table><tr><th>能源类型</th><th>${mu==="万tce"?"能耗":"碳排"}(万)</th><th>占比</th><th>同比</th></tr>
+  ${rows.map(r=>`<tr><td>${r.k}</td><td style="color:${lc("#fff","#0B4E8F")};font-family:Consolas">${r.v}</td>
+   <td style="${m2ViewKey==="pct"?'color:'+lc("#7DD3FC","#0B6EC5")+';font-weight:700':""}">${(r.v/total*100).toFixed(1)}%</td>
+   <td class="${r.yoy<0?"down":"bad"}" style="${m2ViewKey==="yoy"?"font-weight:700":""}">${r.yoy>0?"+":""}${r.yoy}%</td></tr>`).join("")}</table>
+  <div class="concl"><b>分析：</b>${t==="en"?"煤品压减与热力优化贡献主要能耗降幅；":"油品碳排逆势上升，集中于精细化工运输环节，建议纳入下年度告警阈值管理。"}</div>`;
+ const ch=document.getElementById("m2Chart");
+ if(m2ViewKey==="pct")ch.innerHTML=donut(rows.map(r=>({k:r.k,v:r.v,u:" "+mu})),180,24);
+ else if(m2ViewKey==="yoy")ch.innerHTML=hBar(rows.map(r=>({k:r.k,v:r.yoy})),200,520," %",r=>r.v<0?"#4ADE80":"#F87171");
+ else ch.innerHTML=hBar(rows.map(r=>({k:r.k,v:r.v})),200,520," "+mu,(r,i)=>PALETTE[i%8]);
+}
+RENDERERS.m4=()=>`
+ <div style="display:flex;gap:10px;margin-bottom:10px;align-items:center">
+  <select onchange="m4Update(this.value)"><option value="co">按碳排量排序</option><option value="en">按能耗量排序</option></select>
+ </div>
+ <div class="grid g2">
+  <div id="m4Chart"></div>
+  <div><div class="sub2">碳资产 / 减碳量排序 </div>
+   <div class="chart">${hBar(COMPANIES.map(c=>({k:c.name,v:c.asset})).sort((a,b)=>b.v-a.v),150,560," 万元",(it,i)=>"#2DD4BF")}</div>
+   <div class="concl"><b>结论分析：</b>减碳量按同产品类别对标排序，新材料与数据服务企业减碳强度领先；黄河生物医药减碳率仅 10%，建议列入重点帮扶清单。</div></div>
+ </div>`;
+function m4Update(k){
+ const box=document.getElementById("m4Chart");if(!box)return;
+ const key=k==="en"?"en":"co";
+ box.innerHTML=`<div class="sub2">企业${k==="en"?"能耗":"碳排放"}排序</div>`+
+  hBar(COMPANIES.map(c=>({k:c.name,v:c[key]})).sort((a,b)=>b.v-a.v),240,560,k==="en"?" 万tce":" 万tCO₂",(it,i)=>PALETTE[i%8]);
+}
+
+/* ============ ④ 报告增强：时间戳 + 真实下载 Word/PDF ============ */
+/* 时间戳多级独立选择：粒度（年/季/月/小时）+ 年份 + 季度/月份/日期/小时，组合成完整报告时间戳 */
+const RPT_TS_STATE={g:"y",y:2025,q:4,m:11,d:10,h:6};
+function rptTsStr(){
+ const s=RPT_TS_STATE;
+ if(s.g==="y")return `${s.y} 年度 · 汇总时间戳 ${s.y}-12-31 24:00（年度自动汇总）`;
+ if(s.g==="q")return `${s.y} 年 Q${s.q} · 汇总时间戳 ${s.y}-${String(s.q*3).padStart(2,"0")}-30 06:00（季度汇总）`;
+ if(s.g==="m")return `${s.y} 年 ${s.m} 月 · 汇总时间戳 ${s.y}-${String(s.m).padStart(2,"0")}-28 06:00（月度汇总）`;
+ return `${s.y} 年 ${s.m} 月 ${s.d} 日 ${String(s.h).padStart(2,"0")}:00（小时级实时快照）`;
+}
+/* arr 元素可为 [值, 显示文本] 或单值；option 的 value 恒为纯值，保证 rptTsSet 解析稳定 */
+function rptTsSel(key,arr,cur){return `<select title="报告时间戳 · ${key}" onchange="rptTsSet('${key}',this.value)">${arr.map(it=>{const v=Array.isArray(it)?it[0]:it,lb=Array.isArray(it)?it[1]:it;return `<option value="${v}" ${String(v)===String(cur)?"selected":""}>${lb}</option>`;}).join("")}</select>`;}
+function rptTsBoxHtml(){
+ const s=RPT_TS_STATE;
+ let h=`<span style="font-size:12px;color:var(--txt2);font-weight:600">时间戳</span>`
+  +rptTsSel("g",[["年度","年度"],["季度","季度"],["月度","月度"],["小时","小时"]],({"y":"年度","q":"季度","m":"月度","h":"小时"})[s.g])
+  +rptTsSel("y",[2021,2022,2023,2024,2025].map(v=>[v,v+" 年"]),s.y);
+ if(s.g==="q")h+=rptTsSel("q",[1,2,3,4].map(v=>[v,"Q"+v]),s.q);
+ if(s.g==="m"||s.g==="h")h+=rptTsSel("m",[1,2,3,4,5,6,7,8,9,10,11,12].map(v=>[v,v+" 月"]),s.m);
+ if(s.g==="h")h+=rptTsSel("d",[1,5,10,15,20,25,28].map(v=>[v,v+" 日"]),s.d)
+  +rptTsSel("h",Array.from({length:24},(_,i)=>[i,String(i).padStart(2,"0")+" 时"]),s.h);
+ return h;
+}
+function rptTsSet(k,v){
+ const s=RPT_TS_STATE;
+ if(k==="g"){s.g=({"年度":"y","季度":"q","月度":"m","小时":"h"})[v]||s.g;}
+ else if(k==="y")s.y=+v;else if(k==="q")s.q=+v;else if(k==="m")s.m=+v;else if(k==="d")s.d=+v;else if(k==="h")s.h=+v;
+ const box=document.getElementById("rptTsBox");if(box)box.innerHTML=rptTsBoxHtml();
+ const show=document.getElementById("rptTsShow");if(show)show.textContent="报告时间戳："+rptTsStr();
+}
+reg("report",()=>`
+<div class="card">
+ <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;flex-wrap:wrap">
+  <h3 style="margin:0">碳排放报告 </h3>
+  <div style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+   <span style="font-size:12px;color:var(--txt2);font-weight:600">报告周期</span>
+   <select id="rptCycle" onchange="rptSwitch(this.value)"><option value="y">年度</option><option value="q">季度</option><option value="m">月度</option></select>
+   <span id="rptTsBox" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"></span>
+   <button class="btn" onclick="rptDownload('pdf')">生成 PDF</button>
+   <button class="btn" onclick="rptDownload('word')">生成 Word</button>
+  </div>
+ </div>
+ <div class="hint" style="margin-bottom:10px">报告时间戳：<span id="rptTsShow" style="color:#7DD3FC"></span>　｜　时间戳支持 <b>年度 / 季度 / 月度 / 小时</b> 四种粒度独立选择，联动年份、季度、月份、日期与小时，组合成完整报告时点；报告周期（年/季/月）与时间戳粒度互不影响，可创建并下载 PDF 或 Word 报告（演示评分点④）</div>
+ <div class="kpis" style="grid-template-columns:repeat(7,1fr)" id="rptKpi"></div>
+ <div class="grid g2">
+  <div><div class="sub2">碳排放趋势分析 · 环比</div><div id="rptTrend"></div></div>
+  <div><div class="sub2">核算范围分析</div>${donut([{k:"范围一：燃料燃烧",v:11.2},{k:"范围一：工艺排放",v:5.7},{k:"范围二：外购电力",v:18.6},{k:"范围二：外购热力",v:6.8}],160,24)}</div>
+  <div><div class="sub2">能碳结构 · 能源类型统计</div>${donut(Object.entries(PARK.carbonMix).map(([k,v])=>({k,v,u:"%"})),160,24)}</div>
+  <div><div class="sub2">行业碳排放排序</div>${hBar([{k:"新材料",v:10.6},{k:"装备制造",v:8.2},{k:"精细化工",v:8.1},{k:"数据服务",v:7.0},{k:"食品加工",v:5.4},{k:"其他",v:3.0}],170,560," 万tCO₂",(it,i)=>PALETTE[i%8])}</div>
+  <div><div class="sub2">碳达峰推演</div>
+   <table><tr><th>情景</th><th>达峰时间</th><th>达峰值(万tCO₂)</th></tr>
+   <tr><td>低碳情景</td><td>2027 年</td><td>42.3</td></tr>
+   <tr><td>基准情景</td><td>2030 年</td><td>46.5</td></tr>
+   <tr><td>零碳情景</td><td>2025（已过峰）</td><td>42.3</td></tr></table></div>
+  <div><div class="sub2">能碳告警 · 总数占比与企业排序</div>
+   <div style="display:flex;gap:10px;align-items:center;margin-bottom:8px"><span class="tag lv3">紧急 9（7.1%）</span><span class="tag lv2">重要 34（27.0%）</span><span class="tag lv1">次要 83（65.9%）</span></div>
+   ${hBar(COMPANIES.map(c=>({k:c.name,v:Math.round(c.co*2+4)})).sort((a,b)=>b.v-a.v).slice(0,5),130,500," 条",(it,i)=>"#FBBF24")}</div>
+ </div>
+ <div class="card" style="background:rgba(0,91,172,.08);margin-top:14px"><h3>结论与建议</h3>
+  <p style="line-height:2;font-size:13px"><b style="color:#4ADE80">主要成效：</b>碳排放总量同比下降 6.2%，能耗强度累计下降 21.8%，绿电消纳率 96.1% 达标，6 项考核指标中 4 项达标。</p>
+  <p style="line-height:2;font-size:13px"><b style="color:#FBBF24">存在问题与风险：</b>①单位能耗碳排放 2.53 tCO₂/tce 未达 2.40 目标；②精细化工油品碳排同比上升 1.2%；③黄河生物医药碳配额存在盈缺风险，触发超排放预警。</p>
+  <p style="line-height:2;font-size:13px"><b style="color:#38BDF8">重点工作建议：</b>①将兴庆精细化工精馏改造列入 2026 重点工程；②扩大绿电直供覆盖企业至 12 家；③对 2 家配额缺口企业提前启动 CCER 购置预案；④食品加工产业纳入告警阈值动态管理。</p>
+ </div>
+</div>
+`);
+function rptSwitch(k){rptKey=k;renderReport();}
+function renderReport(){
+ const r=REPORTS[rptKey];const box=document.getElementById("rptKpi");if(!box)return;
+ const names=["碳排放量(万t)","单位GDP碳排(t/万元)","单位GDP能耗(tce/万元)","清洁能源消费(%)","消纳率(%)","控排企业数","履约率(%)"];
+ box.innerHTML=r.core.map((v,i)=>kpi(names[i],v,"","同比改善",i<3?"down ok":"up ok")).join("");
+ const tr=document.getElementById("rptTrend");
+ if(tr)tr.innerHTML=comboBarLine(r.labels,"碳排量(万t)",r.carbon,"环比(%)",r.carbon.map((v,i)=>i?+(((v-r.carbon[i-1])/r.carbon[i-1])*100).toFixed(1):0),210,560,"万t","%");
+ const tbox=document.getElementById("rptTsBox");
+ if(tbox)tbox.innerHTML=rptTsBoxHtml();
+ const show=document.getElementById("rptTsShow");if(show)show.textContent="报告时间戳："+rptTsStr();
+}
+/* 按国家发改委《中国发电企业温室气体排放核算方法与报告指南（试行）》模板结构生成报告：
+   封面 → 企业基本情况 → 温室气体排放 → 活动水平数据及来源 → 排放因子数据及来源 → 真实性声明 → 附表1/2/3 */
+function rptTplData(){
+ const r=REPORTS[rptKey],s=RPT_TS_STATE;
+ const totalT=r.core[0]*10000;                              /* 与页面 KPI 碳排放量精确一致 */
+ const sc=totalT/423000;                                    /* 相对年度基准（42.3 万t）的分项缩放 */
+ const F=(n,d)=>n.toLocaleString("zh-CN",{minimumFractionDigits:d,maximumFractionDigits:d});
+ const x=n=>F(n*sc,4);                                     /* 排放量 t */
+ const cycName={y:"年度",q:"季度",m:"月度"}[rptKey];
+ /* 排放分项（年度基准 t，随报告周期缩放；合计=42.3 万t 基准） */
+ const e={fuel:112000,proc:57000,pow:215000,heat:39000};
+ /* 活动水平（年度基准，随报告周期缩放；电力由 0.5306 因子反推，热力由 0.11 反推） */
+ const act={gasoline:680,diesel:940,gas:3260,powKwh:e.pow/0.5306,green:e.pow/0.5306*0.284,greenCert:40000,heat:e.heat/0.11};
+ const d={r,s,sc,F,x,cycName,e,act,year:s.y,totalT,
+  yName:rptKey==="y"?`${s.y} 年度`:rptKey==="q"?`${s.y} 年第 ${s.q} 季度`:`${s.y} 年 ${s.m} 月`,
+  ts:rptTsStr(),date:`${new Date().getFullYear()} 年 ${new Date().getMonth()+1} 月 ${new Date().getDate()} 日`};
+ return d;
+}
+function rptTplHtml(){
+ const d=rptTplData(),{F,x,e,act,sc}=d;
+ const tot=x(e.fuel+e.proc+e.pow+e.heat);
+ const tbl=(rows)=>`<table border="1" cellspacing="0" cellpadding="5" style="border-collapse:collapse;width:100%;font-size:10.5pt">${rows.map(r=>`<tr>${r.map(c=>`<td${c.h?' style="background:#F2F2F2;font-weight:bold;text-align:center"':''}>${c}</td>`).join("")}</tr>`).join("")}</table>`;
+ return `<html><head><meta charset="utf-8"><title>苏银产业园温室气体排放报告</title><style>@page{size:A4;margin:2.54cm 3cm}@page WordSection1{size:595.3pt 841.9pt;margin:72pt 85pt}div.WordSection1{page:WordSection1}@media screen{body{margin:36px 0}div.WordSection1{max-width:700px;margin:0 auto}}@media print{body{margin:0}}</style></head><body style="font-family:'Times New Roman','SimSun',serif;margin:0;line-height:1.9"><div class="WordSection1" style="font-size:11pt">
+ <div style="text-align:center;margin:180px 0 120px;page-break-after:always">
+  <h1 style="font-family:'SimHei';font-size:26pt;letter-spacing:6px;margin:0 0 40px">苏银产业园温室气体排放报告</h1>
+  <p style="font-family:'SimHei';font-size:14pt;margin:0">${d.cycName}（${d.yName}）</p>
+ </div>
+ <p style="font-family:'SimHei';font-size:12pt">根据国家发展和改革委员会发布的《中国发电企业温室气体排放核算方法与报告指南（试行）》及园区统一核算口径，本报告主体核算了 ${d.yName} 温室气体排放量，并填写了相关数据表格。核算数据全部取自园区能碳数据底座（计量表计自动采集，区块链存证），报告时间戳：${d.ts}。现将有关情况报告如下：</p>
+ <h2 style="font-family:'SimHei';font-size:15pt">一、企业基本情况</h2>
+ ${tbl([["单位名称","苏银产业园"],["单位性质","重点排放单位（园区汇总）"],["统一社会信用代码","91640100MA76801X2P"],["所属行业","园区综合能源消费（发电、新材料、装备制造、数据服务等 8 类控排企业）"],["报告期",d.yName],["法定代表人","苏银产业园管理委员会主任"],["负责人姓名","苏银产业园管理委员会主任"],["联系人姓名","能碳管理办公室"],["联系人电话","0951-xxxx xxxx"]].map(r=>r))}
+ <h2 style="font-family:'SimHei';font-size:15pt">二、温室气体排放</h2>
+ <p style="text-indent:2em">本报告主体在报告期（${d.yName}）内温室气体排放总量为 <b>${tot}</b> 吨二氧化碳。其中化石燃料燃烧排放量为 ${x(e.fuel)} 吨；工艺过程排放量为 ${x(e.proc)} 吨；净购入使用的电力产生的排放量为 ${x(e.pow)} 吨；净购入使用的热力产生的排放量为 ${x(e.heat)} 吨。与上一同口径周期相比，碳排放总量同比下降 6.2%，单位能耗碳排放下降 3.2%，绿电消费占比 ${F(28.4*1,1)}%。</p>
+ <h2 style="font-family:'SimHei';font-size:15pt">三、活动水平数据及来源说明</h2>
+ <p style="text-indent:2em">本报告中采用的活动水平数据及来源如下表所示：</p>
+ ${tbl([["排放源类别","燃料/排放类别","净消耗量（t，万Nm³，MWh，GJ）","数据来源","低位发热量（kJ/kg，kJ/Nm³）","数据来源"],
+  ["化石燃料燃烧","汽油",F(act.gasoline*sc,5),"生产系统记录的计量数据","43070.00000","指南缺省值"],
+  ["化石燃料燃烧","柴油",F(act.diesel*sc,5),"生产系统记录的计量数据","42652.00000","指南缺省值"],
+  ["化石燃料燃烧","天然气",F(act.gas*sc,5),"燃气门站计量（区块链存证）","38931000.00000","指南缺省值"],
+  ["净购入电力","电力净购入量",F(act.powKwh*sc,5)+" MWh","用电信息采集系统（15 分钟粒度）","—","—"],
+  ["净购入电力","其中绿电",F(act.green*sc,5)+" MWh","绿电交易结算凭证","—","—"],
+  ["净购入电力","其中绿证",F(act.greenCert*sc,5)+" MWh","绿证核销台账","—","—"],
+  ["净购入热力","外购热量",F(act.heat*sc,5)+" GJ","换热站计量","—","—"]].map(r=>r))}
+ <h2 style="font-family:'SimHei';font-size:15pt">四、排放因子数据及来源说明</h2>
+ <p style="text-indent:2em">本报告中采用的排放因子数据及来源如下表所示：</p>
+ ${tbl([["排放源类别","燃料/排放类别","单位热值含碳量（tC/TJ）","数据来源","碳氧化率（%）","数据来源"],
+  ["燃料燃烧","汽油","18.90000","指南缺省值","98.00000","指南缺省值"],
+  ["燃料燃烧","柴油","20.20000","指南缺省值","98.00000","指南缺省值"],
+  ["燃料燃烧","天然气","15.30000","指南缺省值","99.00000","指南缺省值"]].map(r=>r))}
+ ${tbl([["排放源类别","排放种类","排放因子","单位","数据来源"],
+  ["净购入电力","外购电力","0.5306","tCO₂/MWh","区域电网年平均供电排放因子（统一版本管理）"],
+  ["净购入热力","外购热力","0.11","tCO₂/GJ","指南缺省值"],
+  ["工艺过程","外购蒸汽折算","0.28","tCO₂/t（蒸汽）","系统排放因子库 2025 版"]].map(r=>r))}
+ <p style="text-indent:2em;margin-top:20px">本报告真实、可靠，如报告中的信息与实际情况不符，本企业将承担相应的法律责任。</p>
+ <p style="text-align:right;font-family:'FangSong'">法人（签字）：　　　　　　　　　　</p>
+ <p style="text-align:right;font-family:'FangSong'">${d.date}</p>
+ <p style="page-break-before:always"></p>
+ <h2 style="font-family:'SimHei';font-size:15pt;text-align:center">附表 1　报告主体${d.year}年二氧化碳排放量报告（${d.cycName}）</h2>
+ ${tbl([["指标","数值（tCO₂）"],
+  ["企业二氧化碳排放总量",tot],
+  ["化石燃料燃烧排放量",x(e.fuel)],
+  ["工艺过程排放量",x(e.proc)],
+  ["净购入使用的电力排放量",x(e.pow)],
+  ["净购入使用的热力排放量",x(e.heat)]].map(r=>r))}
+ <h2 style="font-family:'SimHei';font-size:15pt;text-align:center;margin-top:28px">附表 2　报告主体排放活动水平数据</h2>
+ ${tbl([["排放源类别","项目","数据","单位"],
+  ["化石燃料燃烧","汽油净消耗量",F(act.gasoline*sc,5),"t"],
+  ["化石燃料燃烧","柴油净消耗量",F(act.diesel*sc,5),"t"],
+  ["化石燃料燃烧","天然气净消耗量",F(act.gas*sc,5),"万Nm³"],
+  ["净购入电力","净购入电量",F(act.powKwh*sc,5),"MWh"],
+  ["净购入电力","其中绿电",F(act.green*sc,5),"MWh"],
+  ["净购入电力","其中绿证",F(act.greenCert*sc,5),"MWh"],
+  ["净购入热力","外购热量",F(act.heat*sc,5),"GJ"]].map(r=>r))}
+ <h2 style="font-family:'SimHei';font-size:15pt;text-align:center;margin-top:28px">附表 3　报告主体排放因子和计算系数</h2>
+ ${tbl([["排放源类别","项目","数据","单位"],
+  ["化石燃料燃烧","汽油单位热值含碳量","0.0189","tC/GJ"],
+  ["化石燃料燃烧","柴油单位热值含碳量","0.0202","tC/GJ"],
+  ["化石燃料燃烧","天然气单位热值含碳量","0.0153","tC/GJ"],
+  ["化石燃料燃烧","碳氧化率（汽油/柴油/天然气）","98/98/99","%"],
+  ["净购入电力","区域电网年平均供电排放因子","0.5306","tCO₂/MWh"],
+  ["净购入热力","热力排放因子","0.11","tCO₂/GJ"]].map(r=>r))}
+ <p style="font-size:10.5pt;color:;margin-top:14px">注：排放因子由系统排放因子库统一版本管理，核算结果与碳考核评价体系共用同一套口径；活动水平数据取自计量表计自动采集并经区块链存证，可逐级溯源至企业级计量明细。数据截止时间戳：${d.ts}。</p>
+ <div style="page-break-before:always">
+ <table border="0" cellspacing="0" cellpadding="0" style="width:100%;height:900px;border-collapse:collapse"><tr><td valign="bottom" align="right" style="height:900px;border:0;text-align:right">
+  <p style="font-family:'SimHei';font-size:14pt;margin:0 0 18px">报告主体（盖章）：苏银产业园管理委员会</p>
+  <p style="font-family:'SimHei';font-size:14pt;margin:0 0 18px">报告期：${d.yName}（${d.cycName}报告）</p>
+  <p style="font-family:'SimHei';font-size:14pt;margin:0 20px 0 0">编制日期：${d.date}</p>
+ </td></tr></table>
+ </div>
+ </div></body></html>`;
+}
+function rptDownload(kind){
+ const html=rptTplHtml();
+ const d=rptTplData();
+ if(kind==="pdf"){
+  /* 隐藏 iframe 装载模板 HTML 后打印，导出与 Word 完全同版的 PDF */
+  let fr=document.getElementById("rptPrintFrame");
+  if(!fr){fr=document.createElement("iframe");fr.id="rptPrintFrame";fr.style.cssText="position:fixed;right:0;bottom:0;width:0;height:0;border:0";document.body.appendChild(fr);}
+  fr.srcdoc=html;
+  fr.onload=()=>{try{fr.contentWindow.focus();fr.contentWindow.print();}catch(e){}};
+  showModal("生成 PDF 报告",`<div class="concl"><b>PDF 报告生成完成：</b>已按《核算方法与报告指南（试行）》模板生成 ${d.cycName}报告（报告期 ${d.yName}，时间戳 ${d.ts}），请在打印对话框中选择「另存为 PDF」完成下载。</div><div class="hint">报告结构：封面 / 一、企业基本情况 / 二、温室气体排放 / 三、活动水平数据及来源说明 / 四、排放因子数据及来源说明 / 真实性声明 / 附表 1–3</div>`);
+  return;
+ }
+ const blob=new Blob(["\ufeff"+html],{type:"application/msword"});
+ const a=document.createElement("a");a.href=URL.createObjectURL(blob);
+ a.download=`苏银产业园温室气体排放报告(${d.cycName}).doc`;document.body.appendChild(a);a.click();a.remove();
+ showModal("Word 报告已创建",`<div class="concl"><b>下载完成：</b>《苏银产业园温室气体排放报告(${d.cycName}).doc》已开始下载（报告期 ${d.yName}，时间戳 ${d.ts}），可用 Word / WPS 直接打开。</div><div class="hint">报告按《核算方法与报告指南（试行）》模板结构生成（A4 版式、页边距排版）：封面 → 一、企业基本情况 → 二、温室气体排放 → 三、活动水平数据及来源说明 → 四、排放因子数据及来源说明 → 真实性声明与法人签字 → 附表 1（排放量）／附表 2（活动水平）／附表 3（排放因子与计算系数）→ 末页右下角落款（报告主体盖章／报告期／编制日期）</div>`);
+}
+
+/* ============ ⑤ AI 智能体增强：历史会话 + 附件 + 语音唤醒 + 图表回答 ============ */
+const AI_SESS=[
+ {t:"当前对话",sub:"实时交互",msgs:[]},
+ {t:"11-09 绿电交易咨询",sub:"历史会话 1 · 4 轮",msgs:[
+  {r:"u",x:"11 月绿电交易电量多少？"},
+  {r:"a",x:"▶ 能碳问数\n11 月绿电交易 0.21 亿 kWh，占园区用电 14.3%。主力卖方为绿洲光伏电力（120MW 集中式），均价 0.386 元/kWh，较燃煤基准价低 3.2%。\n（可继续追问：交易金额、结算安排）"},
+  {r:"u",x:"追问：交易金额和结算月份？"},
+  {r:"a",x:"▶ 多轮追问 · 带上下文计算\n按 11 月成交量与成交均价测算：交易金额约 803 万元。\n结算安排：11 月结算电量 0.13 亿 kWh（已于 11 月 25 日完成），剩余 0.08 亿 kWh 随 12 月月度结算，绿证同步划转、区块链存证可溯。"},
+  {r:"u",x:"追问：和燃煤电价相比节省了多少成本？"},
+  {r:"a",x:"▶ 多轮追问 · 对比分析\n燃煤基准价 0.399 元/kWh，绿电均价低 0.013 元/kWh：\n· 11 月节省购电成本约 27 万元；按全年绿电 2.6 亿 kWh 测算年节省约 338 万元\n· 叠加绿证收益（约 0.02 元/kWh），绿电综合成本优势扩大到 5.1%\n（可继续追问：明年怎么扩大绿电交易）"},
+  {r:"u",x:"追问：2026 年绿电交易怎么扩大？"},
+  {r:"a",x:"▶ 多轮追问 · 规划建议\n2026 年扩大路径：\n1. 绿洲光伏二期 60MW 投运，年新增绿电 0.9 亿 kWh\n2. 新签宁夏域内绿电直供协议 2 家，交易量目标 0.35 亿 kWh（同比 +66%）\n3. 建议园区预留 20% 电量参与绿电撮合交易，博取峰谷价差收益"}]},
+ {t:"11-08 配额预警处理",sub:"历史会话 2 · 3 轮",msgs:[
+  {r:"u",x:"黄河生物医药配额预警怎么处理？"},
+  {r:"a",x:"▶ 智能诊断\n该企业 2025 配额缺口 320 t，系统已给出三条处置路径：\n1. 购买 CCER 500 t（当前价 102.4 元/t，约 5.1 万元）\n2. 空压机优化减排量核证（580 t，预计 12 月完成）\n3. 绿证抵消（需核销 10,200 张）\n已推送至企业端碳资产管理模块。\n（可继续追问：CCER 价格走势、抵消后能否达标）"},
+  {r:"u",x:"追问：CCER 价格走势如何？"},
+  {r:"a",x:"▶ 多轮追问 · 行情分析\nCCER 近三月走势：95.2 → 98.6 → 102.4 元/t，四季度累计上涨 8.3%。\n驱动因素：2026 年配额收紧预期 + 金融机构入场。\n预测区间：明年 110–125 元/t。建议在 12 月前锁定 500 t，可节省约 4,000–11,000 元。"},
+  {r:"u",x:"追问：抵消后能否达标？"},
+  {r:"a",x:"▶ 多轮追问 · 合规测算\n购买 500 t CCER 后：缺口 320 t 全部清零，富余 180 t 结转下年。\n企业 2025 履约率恢复至 100%，可退出预警名单、进入年度考核达标序列；结转配额按现行规则可留存至 2027 年使用。"}]}];
+let AI_CUR=0,ATTACH_URL=null;
+reg("aiAgent",()=>`
+<div class="grid" style="grid-template-columns:240px 1fr">
+ <div class="card" style="margin-bottom:0">
+  <h3>会话管理</h3>
+  <div class="ai-side" id="aiSess">${AI_SESS.map((s,i)=>`<div class="ai-sess ${i===AI_CUR?"on":""}" onclick="aiSwitch(${i})">${s.t}<div class="sub">${s.sub} · ${s.msgs.length} 条消息</div></div>`).join("")}</div>
+  <button class="btn ghost sm" style="margin-top:10px;width:100%" onclick="aiNew()">＋ 新建对话</button>
+  <div class="hint">支持多轮对话与历史对话查看（演示评分点⑤）；点击历史会话可回看完整记录</div>
+ </div>
+ <div class="card" style="margin-bottom:0"><h3>AI 智能问答 </h3>
+  <div class="chat">
+   <div class="chat-list" id="chatList"></div>
+   <div class="chips" id="qaChips">${aiChips()}</div>
+   <div class="chat-input">
+    <input type="text" id="chatInput" placeholder="输入问题，例如：园区今年能耗多少？" onkeydown="if(event.key==='Enter')askFree()">
+    <button class="btn" onclick="askFree()">发送</button>
+    <input type="file" id="aiFile" accept="image/*" style="display:none" onchange="aiAttach(this)">
+    <button class="btn ghost" title="上传图片附件" onclick="document.getElementById('aiFile').click()">📎 附件</button>
+    <button class="btn ghost mic-btn" id="micBtn" title="语音唤醒：说「小苏小苏」唤醒智能体（演示评分点⑤）" onclick="aiVoice()">🎤 语音唤醒</button>
+   </div>
+   <div class="voice-status" id="voiceStatus">待唤醒 · 唤醒词：<b>「小苏小苏」</b>（点击 🎤 开始聆听，唤醒后语音提问，回答自动播报）</div>
+  </div></div>
+ <div>
+  <div class="card"><h3>智能体平台能力</h3>
+   <table>${row("专用大模型","零碳园区垂直领域","统一下发")}${row("专业智能体","问数/预测/诊断/规划","4 类")}${row("场景数据集","园区 5 年能碳数据","脱敏")}${row("算法/技能组件","预测·诊断·优化","可插拔")}${row("AI 评测体系","准确率/幻觉率","季度评测")}</table></div>
+  <div class="card"><h3>▲ 重要参数提示</h3>
+   <div class="concl"><b class="red">AI智能预测：</b>融合历史与实时数据，预测能耗、碳排放、负荷及新能源出力——需系统截图佐证。</div>
+   <div class="concl"><b class="red">AI节能诊断：</b>实时分析能耗数据，定位高耗能环节，输出节能潜力、整改建议及预期收益。</div>
+   <div class="hint"> 均需提供源代码</div></div>
+ </div>
+</div>`);
+function aiMsgHTML(m){
+ if(m.r==="u")return `<div class="msg user">${m.x}${m.img?`<img class="thumb" src="${m.img}">`:""}</div>`;
+ return `<div class="msg ai">${m.x.replace(/\n/g,"<br>")}${m.chart?`<div style="margin-top:8px">${m.chart}</div>`:""}</div>`;}
+function aiRender(){
+ const list=document.getElementById("chatList");if(!list)return;
+ const s=AI_SESS[AI_CUR];
+ list.innerHTML=s.msgs.length?s.msgs.map(aiMsgHTML).join(""):`<div class="msg ai">您好，我是苏银产业园零碳 AI 智能体「小苏」（智能预测 / 节能诊断 / 智能问答）。<br>先点一个「新话题」提问，我回答后会出现<b>「可追问」</b>标签——问题会带着上文继续聊（如：碳排放 → 为什么下降 → 怎么压减 → 纳入零碳推演 → 预测明年 → 哪家企业潜力大 → 整改方案），形成完整多轮对话链。<br>也支持语音唤醒（说「小苏小苏」）、上传图片附件与图表回答。</div>`;
+ list.scrollTop=list.scrollHeight;}
+function aiSwitch(i){AI_CUR=i;document.querySelectorAll(".ai-sess").forEach((el,j)=>el.classList.toggle("on",j===i));aiRender();aiChipsRefresh();}
+function aiNew(){AI_SESS.unshift({t:"新对话 "+(AI_SESS.length+1),sub:"实时交互",msgs:[]});AI_CUR=0;
+ document.getElementById("aiSess").innerHTML=AI_SESS.map((s,i)=>`<div class="ai-sess ${i===AI_CUR?"on":""}" onclick="aiSwitch(${i})">${s.t}<div class="sub">${s.sub} · ${s.msgs.length} 条消息</div></div>`).join("");aiRender();aiChipsRefresh();}
+const AI_CHARTS=[
+ ()=>lineChart(YEARS.map(String),[{name:"碳排(万t)",color:"#2DD4BF",data:PARK.carbon}],150,460),
+ null,
+ ()=>hBar([{k:"兴庆精细化工",v:310},{k:"贺兰装备制造",v:280},{k:"塞上食品加工",v:190}],150,460," tce",(it,i)=>["#F87171","#FBBF24","#38BDF8"][i]),
+ ()=>lineChart(["6月","7月","8月","9月","10月","11月","12月(预测)"],[{name:"园区负荷(MW)",color:"#38BDF8",data:[150,158,164,171,166,162,172]},{name:"光伏出力(MW)",color:"#4ADE80",data:[88,92,96,94,85,78,70]}],150,460)];
+/* 动态追问 chips：根据当前会话最后一轮回答给出「可追问」下一跳，另列「新话题」根问题 */
+function aiChips(){
+ const s=AI_SESS[AI_CUR];
+ const last=[...s.msgs].reverse().find(m=>m.r==="a"&&m.nid);
+ const cur=last?AI_QA.find(x=>x.id===last.nid):null;
+ const fu=(cur&&cur.next||[]).map(id=>AI_QA.find(x=>x.id===id)).filter(Boolean);
+ const roots=AI_QA.filter(x=>x.root);
+ let h="";
+ if(fu.length)h+=`<span style="font-size:11px;color:var(--txt3);align-self:center;margin-right:2px">可追问 ▸</span>`+fu.map(qa=>`<span class="chip" onclick="askAI('${qa.id}')">${qa.q}</span>`).join("");
+ h+=`<span style="font-size:11px;color:var(--txt3);align-self:center;margin-right:2px">${fu.length?"新话题 ▸":"预置问题 ▸"}</span>`+roots.map(qa=>`<span class="chip" onclick="askAI('${qa.id}')">${qa.q}</span>`).join("");
+ return h;}
+function aiChipsRefresh(){const el=document.getElementById("qaChips");if(el)el.innerHTML=aiChips();}
+function askAI(id){const qa=AI_QA.find(x=>x.id===id)||AI_QA[id];if(!qa)return;
+ const list=document.getElementById("chatList");if(!list)return;
+ const s=AI_SESS[AI_CUR];s.msgs.push({r:"u",x:qa.q});list.innerHTML+=aiMsgHTML({r:"u",x:qa.q});
+ const tip=document.createElement("div");tip.className="msg ai";tip.innerHTML='<span class="typing">正在调用知识库与碳数据分析…</span>';list.appendChild(tip);list.scrollTop=list.scrollHeight;
+ setTimeout(()=>{tip.remove();const m={r:"a",x:qa.a,nid:qa.id,chart:AI_CHARTS[qa.ch]?AI_CHARTS[qa.ch]():null};s.msgs.push(m);list.innerHTML+=aiMsgHTML(m);list.scrollTop=list.scrollHeight;aiChipsRefresh();},700);}
+function askFree(){const inp=document.getElementById("chatInput");if(!inp)return;const q=inp.value.trim();if(!q)return;inp.value="";
+ const list=document.getElementById("chatList");const s=AI_SESS[AI_CUR];
+ s.msgs.push({r:"u",x:q,img:ATTACH_URL});
+ list.innerHTML+=aiMsgHTML({r:"u",x:q,img:ATTACH_URL});
+ const wasAttach=!!ATTACH_URL;ATTACH_URL=null;
+ setTimeout(()=>{let m;
+  if(wasAttach)m={r:"a",x:"▶ 附件解析完成\n已识别图片中的设备铭牌：型号 LC-033（低压用电监测终端），额定电流 100A。\n已自动关联该设备能效档案：本月电能损耗率 1.8%，状态正常；建议保持季度巡检节奏。\n"};
+  else{const hit=AI_QA.find(x=>q.includes("碳")&&x.q.includes("碳排")||q.includes("预测")||q.includes("节能")||q.includes("规划"));
+   m=hit?{r:"a",x:hit.a,nid:hit.id}:{r:"a",x:"已在园区知识库检索，为您匹配到相关政策与口径说明。\n演示环境建议点击上方「预置问题」体验完整多轮对话链：能碳问数 → 追问归因 → 范围二治理 → 零碳推演 → 趋势预测 → 节能诊断 → 整改方案。"};}
+  s.msgs.push(m);list.innerHTML+=aiMsgHTML(m);list.scrollTop=list.scrollHeight;aiChipsRefresh();},650);}
+function aiAttach(inp){const f=inp.files&&inp.files[0];if(!f)return;
+ ATTACH_URL=URL.createObjectURL(f);
+ const inp2=document.getElementById("chatInput");if(inp2)inp2.value="请解析这张设备照片（附件）";
+ inp.value="";}
+/* ============ 语音唤醒引擎（Web Speech API：唤醒词识别 → 应答 → 语音提问 → 播报回答） ============ */
+(function(){const st=document.createElement("style");st.textContent=
+`.voice-status{margin-top:8px;font-size:12px;color:var(--txt3);display:flex;align-items:center;gap:8px;min-height:20px;flex-wrap:wrap}
+.voice-status b{color:var(--txt1,#e2e8f0)}
+.v-wave{display:inline-block;width:10px;height:10px;border-radius:50%;background:#4ADE80;animation:vwave 1.2s infinite;flex:none}
+.v-wave.hot{background:var(--red);animation-duration:.5s}
+@keyframes vwave{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(1.7);opacity:.45}}`;
+document.head.appendChild(st);})();
+function vTTS(t){try{if(!window.speechSynthesis)return;const u=new SpeechSynthesisUtterance(t);u.lang="zh-CN";u.rate=1.05;speechSynthesis.cancel();speechSynthesis.speak(u);}catch(e){}}
+function vBeep(up){try{const AC=window.AudioContext||window.webkitAudioContext;if(!AC)return;const ac=new AC();const o=ac.createOscillator(),g=ac.createGain();o.frequency.value=up?880:660;g.gain.value=.13;o.connect(g);g.connect(ac.destination);o.start();o.stop(ac.currentTime+(up?.18:.12));}catch(e){}}
+const VW={rec:null,on:false,mode:"wake",supported:!!(window.SpeechRecognition||window.webkitSpeechRecognition)};
+const WAKE_RE=/(你好)?(小苏|苏苏|零碳精灵)/;
+function voiceUI(){const b=document.getElementById("micBtn"),s=document.getElementById("voiceStatus");if(!b)return;
+ if(!VW.on){b.classList.remove("listening");b.textContent="🎤 语音唤醒";if(s)s.innerHTML="待唤醒 · 唤醒词：<b>「小苏小苏」</b>";}
+ else{b.classList.add("listening");b.textContent="⏹ 停止聆听";
+  if(s)s.innerHTML=VW.mode==="wake"?"<span class='v-wave'></span>聆听中 · 请说唤醒词<b>「小苏小苏」</b>":"<span class='v-wave hot'></span>已唤醒 · 请讲（语音提问，说完自动识别发送）";}}
+function aiVoice(){VW.on?voiceStop():voiceStart();}
+function voiceStart(){
+ if(!VW.supported){voiceFallback();return;}
+ if(VW.rec){try{VW.rec.onend=null;VW.rec.stop();}catch(e){}}
+ const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+ const r=new SR();VW.rec=r;r.lang="zh-CN";r.continuous=true;r.interimResults=true;
+ r.onresult=e=>{let fin="",itr="";
+  for(let i=e.resultIndex;i<e.results.length;i++){const t=e.results[i][0].transcript;if(e.results[i].isFinal)fin+=t;else itr+=t;}
+  const txt=(fin||itr).trim();if(!txt)return;
+  if(VW.mode==="wake"){const m=txt.match(WAKE_RE);
+   if(m){vBeep(true);VW.mode="cmd";voiceUI();vTTS("我在，请讲");
+    const rest=txt.slice(txt.indexOf(m[0])+m[0].length).replace(/[。,.，？！?!\s]/g,"");
+    if(rest.length>=3)voiceCommand(rest);}}
+  else if(fin)voiceCommand(fin);};
+ r.onerror=e=>{
+  if(e.error==="not-allowed"||e.error==="service-not-allowed"){voiceStop(true);voiceHint("⚠ 麦克风权限被拒绝或语音服务不可用——已切换为模拟模式，点击「模拟说唤醒词」体验流程");}
+  else if(e.error==="no-speech"){/* 继续聆听 */}};
+ r.onend=()=>{if(VW.on){try{r.start();}catch(e){}}};
+ VW.on=true;VW.mode="wake";voiceUI();
+ try{r.start();}catch(e){voiceFallback();}}
+function voiceStop(silent){VW.on=false;if(VW.rec){try{VW.rec.onend=null;VW.rec.stop();}catch(e){}VW.rec=null;}
+ const b=document.getElementById("micBtn");if(b){b.classList.remove("listening");b.textContent="🎤 语音唤醒";}
+ const s=document.getElementById("voiceStatus");if(s&&!silent)s.innerHTML="待唤醒 · 唤醒词：<b>「小苏小苏」</b>";}
+function voiceCommand(q){q=q.replace(/[。,.，？！?!]/g,"").trim();if(!q)return;
+ const inp=document.getElementById("chatInput");if(inp)inp.value=q;
+ const s=document.getElementById("voiceStatus");if(s)s.innerHTML="<span class='v-wave hot'></span>收到提问："+q;
+ askFree();
+ setTimeout(()=>{const list=document.getElementById("chatList");if(!list)return;
+  const ais=list.querySelectorAll(".msg.ai");const last=ais[ais.length-1];
+  if(last){const t=last.textContent.replace(/（[^）]*）/g," ").replace(/\d+\.\s*/g,"\n").slice(0,150);vTTS("查询结果："+t);}},1000);}
+function voiceHint(msg){const s=document.getElementById("voiceStatus");if(s)s.innerHTML="<span style='color:var(--amber,#FBBF24)'>"+msg+"</span>";}
+function voiceFallback(){VW.on=true;VW.mode="wake";voiceUI();
+ voiceHint("当前浏览器不支持语音识别（建议 Edge/Chrome 并允许麦克风）——模拟模式：<a href='javascript:void(0)' style='text-decoration:underline' onclick='vSimWake()'>点此模拟说「小苏小苏」</a>，唤醒后键入提问");}
+function vSimWake(){vBeep(true);VW.mode="cmd";voiceUI();vTTS("我在，请讲");
+ const inp=document.getElementById("chatInput");if(inp){inp.placeholder="（模拟模式）键入语音提问后点发送";inp.focus();}}
+/* AI 页初始渲染 */
+const _aiOldReg=AI_SESS;aiRender();
+
+/* ============ 演示导览面板（录制辅助） ============ */
+(function(){
+ const steps=[
+  {t:"① 驾驶舱（2 分）",pts:"左侧导航点击「能碳总览驾驶舱」→ 全屏大屏模式（隐藏侧栏/顶栏，顶栏带实时时钟）→ 三维园区（视角/缩放/点击建筑下钻）→ 能流/碳流图（切换企业/时间维度）→ 核心指标点击弹历年趋势 → 信息概览 8 卡片专题分析 → 按 ESC 或点「退出全屏」返回系统界面",act:()=>go("dashboard")},
+  {t:"② 一张图（2 分）",pts:"街道/园区片区划分 → 企业搜索 → 要素切换（能源/碳排/清洁/成就）→ 年份播放 → 点位下钻看 5 年数据+减碳措施 → 企业排序",act:()=>go("oneMap")},
+  {t:"③ 多维分析（2 分）",pts:"趋势分析（能耗/碳排 × 年/季/月 × 区域/产业/企业+文本结论）→ 结构分析（数值/占比/同比切换）→ 范围 1/2 → 企业排序（能耗/碳排）→ 对标（国/省/市）",act:()=>go("multi")},
+  {t:"④ 碳排放报告（2 分）",pts:"年/季/月切换 → 时间戳四粒度独立选择（年/季/月/小时，联动年-季-月-日-时）→ 生成 Word（真实下载）→ 生成 PDF（打印另存）→ 核对报告 8 项内容",act:()=>go("report")},
+  {t:"⑤ AI 智能体（2 分）",pts:"语音唤醒（点🎤后说「小苏小苏」→ 我在请讲 → 语音提问自动识别 → 回答语音播报）→ 多轮问答链演示：点「2025年园区碳排放多少」→ 追问为什么下降 → 范围二怎么压减 → 纳入零碳推演 → 预测2026碳排 → 哪家企业潜力最大 → 整改方案（含图表展示）→ 上传图片附件 → 历史会话查看（绿电交易 4 轮 / 配额预警 3 轮）",act:()=>go("aiAgent")}];
+ const box=document.createElement("div");
+ box.innerHTML=`<div class="demo-fab"><button onclick="document.querySelector('.demo-panel').classList.toggle('open')">🎬 演示导览（评分点导航）</button></div>
+ <div class="demo-panel"><h4>演示视频 5 大评分点 · 逐项演示各得 2 分</h4>
+ ${steps.map((s,i)=>`<div class="demo-step"><b>${s.t}</b><div class="pts">${s.pts}</div><button class="btn sm" onclick="DEMO_STEPS[${i}].act();document.querySelector('.demo-panel').classList.remove('open')">跳转演示</button></div>`).join("")}
+ <div class="hint">录制提示：视频总时长 ≤20 分钟，mp4/avi 格式；U 盘单独密封，投标截止前递交交易中心。</div></div>`;
+ document.body.appendChild(box);
+ window.DEMO_STEPS=steps;
+})();
+/* 初始会话渲染 */
+aiRender();
+/* 用增强版重新渲染当前页（驾驶舱核心指标区/三维园区/能流碳流/信息概览即刻生效），并保持用户已切换的页签不被覆盖（防加载期吞点击） */
+go(curPage);
+(function(){const t=document.querySelector(".tab.on");if(t){const R=(typeof RENDERERS!=="undefined")&&RENDERERS[t.dataset.t];if(R){const b=document.getElementById("tabBody");if(b)b.innerHTML=R();}}})();
+/* AI 页需在渲染后再填充会话消息（aiRender 依赖 chatList 存在） */
+if(curPage==="aiAgent")aiRender();
+
+/* ============ ⑥ 三维实景升级：Three.js 真三维苏银产业园（真实产业布局·增强版） ============ */
+(function(){
+/* 企业名录映射为真实入驻企业（据苏银产业园管委会/银川市政府公开资料；能碳数据为演示数据） */
+const REAL=[
+ {id:1,name:"宏基新材料",real:"5.3 万吨特种石墨项目"},
+ {id:2,name:"嘉盛德电子材料",real:"半导体封装材料 · 5G 覆铜板"},
+ {id:3,name:"宇超电力装备",real:"固态变压器 · 电力方舱（国家级专精特新）"},
+ {id:4,name:"鲜控冷链设备",real:"冷链设备制造（已建成投产）"},
+ {id:5,name:"智慧银川大数据中心",real:"6 万㎡ T4 级数据中心 · 电信绿色智算 2600+ 架"},
+ {id:6,name:"海归小镇生物医药园",real:"欧美同学会银川海归小镇 · 医疗器械/生物医药"},
+ {id:7,name:"宝丰储能科技",real:"电池及储能集装系统示范项目（园区产值第一）"},
+ {id:8,name:"莱卡纤维新材料",real:"3 万吨差别化氨纶项目"}];
+REAL.forEach(r=>{const c=COMPANIES.find(x=>x.id===r.id);if(c){c.name=r.name;c.real=r.real;}});
+
+document.head.insertAdjacentHTML("beforeend",`<style>
+#wb3dTip{position:fixed;z-index:95;pointer-events:none;display:none;background:rgba(8,18,36,.92);border:1px solid rgba(64,150,220,.6);border-radius:8px;padding:8px 12px;font-size:12px;color:#DCE8F5;line-height:1.7;box-shadow:0 10px 26px rgba(2,8,20,.55);backdrop-filter:blur(6px);}
+#wb3dTip b{color:#7DD3FC;}
+.iso-stage canvas{border-radius:8px;}
+.iso-toolbar{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;justify-content:center;}
+.iso-toolbar .btn{padding:4px 10px;font-size:11px;}
+.iso-leg{display:flex;gap:14px;flex-wrap:wrap;font-size:11px;color:#8FA8C4;margin-top:6px;justify-content:center;}
+.iso-leg i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:4px;vertical-align:-1px;}
+</style>
+<div id="wb3dTip"></div>`);
+
+/* 三维场景数据（坐标为场景建模坐标，非真实经纬度） */
+const EG_COL={A:0x2DD4BF,B:0xFBBF24,C:0xF87171};
+const EG_PARTICLE={A:0x4ADE80,B:0xFBBF24,C:0xF87171};
+const ZONES=[
+ {name:"新材料产业区",x:-48,z:-28,w:74,d:62,col:0xFBBF24},
+ {name:"绿色算力产业区",x:36,z:-34,w:66,d:54,col:0x38BDF8},
+ {name:"新能源产业区",x:68,z:8,w:46,d:46,col:0x2DD4BF},
+ {name:"医疗健康产业区",x:-50,z:38,w:54,d:44,col:0xA78BFA}];
+const B3=[
+ {ref:1,x:-56,z:-34,w:26,d:16,h:26,type:"industrial"},
+ {ref:8,x:-30,z:-52,w:22,d:13,h:16,type:"industrial"},
+ {ref:2,x:-26,z:-16,w:16,d:12,h:10,type:"standard"},
+ {ref:5,x:24,z:-46,w:38,d:22,h:12,type:"datacenter"},
+ {ref:7,x:62,z:-30,w:30,d:18,h:7,type:"storage"},
+ {ref:4,x:-26,z:42,w:20,d:14,h:14,type:"standard"},
+ {ref:3,x:30,z:42,w:22,d:14,h:20,type:"standard"},
+ {ref:6,x:-60,z:40,w:24,d:16,h:13,type:"standard"},
+ {name:"智慧产业研发大厦",x:10,z:-12,w:14,d:14,h:36,col:0x4A7AB5,scen:"hq",type:"hq"},
+ {name:"甘露330kV变电站",x:-80,z:-6,w:20,d:16,h:5,col:0x4A6A8C,scen:"sub",type:"substation"},
+ {name:"银川算力产业园",x:50,z:-14,w:18,d:12,h:9,col:0x3BA3E0,scen:"suan",type:"standard"},
+ {name:"云碳共享储能电站",x:40,z:-48,w:18,d:8,h:4,col:0x2DD4BF,scen:"ess",type:"storage"}];
+const SCEN_INFO={
+ hq:{t:"智慧产业研发大厦",d:"苏银产业园管委会驻地，位于京河大道与如意街交叉口；园区「E 站式服务中心」所在地，实现「园区事园内办」。"},
+ sub:{t:"甘露 330kV 变电站",d:"园区电源枢纽：建成 1 座 330kV 甘露变电站 + 3 座 110kV 变电所，为国网银川滨河供电公司管辖，绿电入园与储能并网的核心节点。"},
+ suan:{t:"银川算力产业园",d:"2025 年 7 月启动运营；已引入天云算力中心、电信绿色智算中心（2600+ 架机柜）、百度智能云人工智能基础数据产业基地，服务银川「算力之都」建设。"},
+ ess:{t:"云碳共享储能电站",d:"2026 年园区 19 个新开工项目之一，支撑国家级零碳园区建设方案（2026—2027 年）落地，为园区晚峰调峰与绿电消纳提供共享储能容量。"}};
+
+let T3=null;
+let isNight=false;
+
+/* 窗户纹理（灰度底，由材质颜色着色；亮窗更亮） */
+function winTex(){
+ try{
+  const cv=document.createElement("canvas");cv.width=64;cv.height=128;
+  const g=cv.getContext("2d");if(!g)return null;
+  g.fillStyle="#5e7896";g.fillRect(0,0,64,128);
+  let seed=7;const rnd=()=>((seed=seed*16807%2147483647)/2147483647);
+  for(let y=8;y<122;y+=12)for(let x=6;x<58;x+=10){
+   g.fillStyle=rnd()>0.42?"#eef7ff":"#22354c";g.fillRect(x,y,6,7);}
+  const t=new THREE.CanvasTexture(cv);return t;
+ }catch(e){return null;}
+}
+/* 夜间发光窗户纹理 */
+function winTexNight(){
+ try{
+  const cv=document.createElement("canvas");cv.width=64;cv.height=128;
+  const g=cv.getContext("2d");if(!g)return null;
+  g.fillStyle="#0a1525";g.fillRect(0,0,64,128);
+  let seed=13;const rnd=()=>((seed=seed*16807%2147483647)/2147483647);
+  for(let y=8;y<122;y+=12)for(let x=6;x<58;x+=10){
+   const on=rnd()>0.45;
+   g.fillStyle=on?"#ffe9a8":"#0d1f38";g.fillRect(x,y,6,7);
+   if(on){g.fillStyle="rgba(255,210,120,.25)";g.fillRect(x-1,y-1,8,9);}}
+  const t=new THREE.CanvasTexture(cv);return t;
+ }catch(e){return null;}
+}
+/* 地面网格纹理 */
+function groundTex(){
+ try{
+  const cv=document.createElement("canvas");cv.width=256;cv.height=256;
+  const g=cv.getContext("2d");if(!g)return null;
+  g.fillStyle="#0e2138";g.fillRect(0,0,256,256);
+  g.strokeStyle="rgba(40,80,130,.25)";g.lineWidth=1;
+  for(let i=0;i<=256;i+=16){g.beginPath();g.moveTo(i,0);g.lineTo(i,256);g.stroke();g.beginPath();g.moveTo(0,i);g.lineTo(256,i);g.stroke();}
+  const t=new THREE.CanvasTexture(cv);t.wrapS=t.wrapT=THREE.RepeatWrapping;t.repeat.set(76,76);return t;
+ }catch(e){return null;}
+}
+/* 文字标签精灵 */
+function makeLabel(main,sub,dim){
+ try{
+  const cv=document.createElement("canvas");cv.width=560;cv.height=(sub?150:96);
+  const g=cv.getContext("2d");if(!g)return null;
+  g.fillStyle="rgba(7,16,32,.82)";g.fillRect(8,8,544,cv.height-16);
+  g.strokeStyle="rgba(64,150,220,.85)";g.lineWidth=3;g.strokeRect(8,8,544,cv.height-16);
+  g.textAlign="center";g.fillStyle=dim?"#9FBEDA":"#FFFFFF";
+  g.font="bold 44px 'Microsoft YaHei',sans-serif";g.fillText(main,280,sub?62:62);
+  if(sub){g.fillStyle="#7DD3FC";g.font="28px 'Microsoft YaHei',sans-serif";g.fillText(sub,280,116);}
+  const t=new THREE.CanvasTexture(cv);
+  const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:t,transparent:true,depthTest:true}));
+  sp.scale.set(dim?17:24,dim?17*cv.height/560:24*cv.height/560,1);
+  return sp;
+ }catch(e){return null;}
+}
+/* 天穹渐变球 */
+function makeSky(){
+ try{
+  const cv=document.createElement("canvas");cv.width=64;cv.height=256;
+  const g=cv.getContext("2d");if(!g)return null;
+  const grd=g.createLinearGradient(0,0,0,256);
+  grd.addColorStop(0,"#0a1e3a");grd.addColorStop(0.38,"#163b66");grd.addColorStop(0.50,"#3a6ea0");
+  grd.addColorStop(0.56,"#24425f");grd.addColorStop(1,"#0b1e33");
+  g.fillStyle=grd;g.fillRect(0,0,64,256);
+  const t=new THREE.CanvasTexture(cv);
+  const sky=new THREE.Mesh(new THREE.SphereGeometry(600,24,16),new THREE.MeshBasicMaterial({map:t,side:THREE.BackSide,fog:false}));
+  return sky;
+ }catch(e){return null;}
+}
+function makeSkyNight(){
+ try{
+  const cv=document.createElement("canvas");cv.width=64;cv.height=256;
+  const g=cv.getContext("2d");if(!g)return null;
+  const grd=g.createLinearGradient(0,0,0,256);
+  grd.addColorStop(0,"#020610");grd.addColorStop(0.4,"#06112a");grd.addColorStop(0.5,"#0d2348");
+  grd.addColorStop(0.56,"#0a1a36");grd.addColorStop(1,"#040c1c");
+  g.fillStyle=grd;g.fillRect(0,0,64,256);
+  // 星星
+  let s=31;const r=()=>((s=s*16807%2147483647)/2147483647);
+  for(let i=0;i<80;i++){g.fillStyle="rgba(255,255,255,"+(0.3+r()*0.6)+")";g.fillRect(r()*64,r()*100,1,1);}
+  const t=new THREE.CanvasTexture(cv);
+  const sky=new THREE.Mesh(new THREE.SphereGeometry(600,24,16),new THREE.MeshBasicMaterial({map:t,side:THREE.BackSide,fog:false}));
+  return sky;
+ }catch(e){return null;}
+}
+
+/* —— 建筑构造器：分段腰线 + 女儿墙 + 屋顶设备 —— */
+function buildBuilding(b,col,tex,matOpts){
+ const grp=new THREE.Group();
+ const mat=new THREE.MeshPhysicalMaterial(Object.assign({color:col,map:tex||undefined,emissive:0x0b1a2e,
+  roughness:0.55,metalness:0.15,clearcoat:0.65,clearcoatRoughness:0.25},matOpts||{}));
+ const body=new THREE.Mesh(new THREE.BoxGeometry(b.w,b.h,b.d),mat);
+ body.position.y=b.h/2;body.castShadow=true;body.receiveShadow=true;grp.add(body);
+ // 腰线（中部一道深色横条）
+ if(b.h>14){
+  const belt=new THREE.Mesh(new THREE.BoxGeometry(b.w+0.3,1.2,b.d+0.3),new THREE.MeshLambertMaterial({color:0x2a3f5c}));
+  belt.position.y=b.h*0.55;grp.add(belt);
+ }
+ // 女儿墙
+ const parapet=new THREE.Mesh(new THREE.BoxGeometry(b.w+0.4,1.4,b.d+0.4),new THREE.MeshLambertMaterial({color:col,emissive:0x0a1830}));
+ parapet.position.y=b.h+0.7;grp.add(parapet);
+ // 屋顶设备
+ if(b.type==="datacenter"){
+  for(let i=-1;i<=1;i++)for(let j=-1;j<=1;j++){
+   const ct=new THREE.Mesh(new THREE.CylinderGeometry(2.2,2.6,2.4,10),new THREE.MeshLambertMaterial({color:0x8aa6c4}));
+   ct.position.set(b.x!==undefined?0:i*10,b.h+2.4,j*7);grp.add(ct);
+   const fan=new THREE.Mesh(new THREE.CircleGeometry(1.6,10),new THREE.MeshBasicMaterial({color:0x1a2a40}));
+   fan.rotation.x=-Math.PI/2;fan.position.set(i*10,b.h+3.7,j*7);grp.add(fan);
+  }
+ }else if(b.type==="industrial"){
+  // 烟囱
+  for(let i=0;i<2;i++){
+   const sc=new THREE.Mesh(new THREE.CylinderGeometry(1.1,1.4,Math.max(8,b.h*0.5),8),new THREE.MeshLambertMaterial({color:0x6a7888}));
+   sc.position.set((i?1:-1)*b.w*0.3,b.h+Math.max(4,b.h*0.25),b.d*0.3);grp.add(sc);
+   const cap=new THREE.Mesh(new THREE.CylinderGeometry(1.3,1.1,1,8),new THREE.MeshLambertMaterial({color:0x444c58}));
+   cap.position.set((i?1:-1)*b.w*0.3,b.h+Math.max(4,b.h*0.25)+Math.max(8,b.h*0.5)/2+0.5,b.d*0.3);grp.add(cap);
+  }
+ }else if(b.type==="storage"){
+  // 逆变器柜阵
+  for(let i=-1;i<=1;i++){
+   const inv=new THREE.Mesh(new THREE.BoxGeometry(1.8,2.2,1.2),new THREE.MeshLambertMaterial({color:0x3a5a7a}));
+   inv.position.set(i*5,b.h+1.1,0);grp.add(inv);
+  }
+ }else{
+  // 普通楼顶空调机组
+  for(let i=0;i<3;i++){
+   const u=new THREE.Mesh(new THREE.BoxGeometry(3,1.4,2),new THREE.MeshLambertMaterial({color:0x4a5a72}));
+   u.position.set((i-1)*b.w*0.28,b.h+1,b.d*0.2);grp.add(u);
+  }
+ }
+ // 企业标识牌（正面顶部小牌子）
+ if(b.ref||b.scen){
+  const sign=new THREE.Mesh(new THREE.BoxGeometry(Math.min(b.w*0.6,14),1.6,0.4),new THREE.MeshBasicMaterial({color:0x38BDF8}));
+  sign.position.set(0,b.h*0.85,b.d/2+0.3);grp.add(sign);
+ }
+ return {grp,mat,body};
+}
+/* 树（三种） */
+function makeTree(kind,x,z){
+ const t=new THREE.Group();
+ const trunk=new THREE.Mesh(new THREE.CylinderGeometry(.4,.55,2.2,6),new THREE.MeshLambertMaterial({color:0x6b4a2f}));
+ trunk.position.y=1.1;t.add(trunk);
+ if(kind===0){ // 阔叶
+  const cr=new THREE.Mesh(new THREE.SphereGeometry(2.2,8,6),new THREE.MeshLambertMaterial({color:0x2d8a52}));
+  cr.position.y=4.2;t.add(cr);
+ }else if(kind===1){ // 针叶
+  const cr1=new THREE.Mesh(new THREE.ConeGeometry(1.8,3.5,8),new THREE.MeshLambertMaterial({color:0x1f6a3d}));
+  cr1.position.y=3.8;t.add(cr1);
+  const cr2=new THREE.Mesh(new THREE.ConeGeometry(1.3,2.8,8),new THREE.MeshLambertMaterial({color:0x257a45}));
+  cr2.position.y=5.6;t.add(cr2);
+ }else{ // 灌木球
+  const cr=new THREE.Mesh(new THREE.SphereGeometry(1.4,8,6),new THREE.MeshLambertMaterial({color:0x3a9a5e}));
+  cr.position.y=3;t.add(cr);
+ }
+ t.position.set(x,0,z);return t;
+}
+/* 车辆 */
+function makeCar(x,z,rot,color){
+ const c=new THREE.Group();
+ const body=new THREE.Mesh(new THREE.BoxGeometry(4,1.2,1.8),new THREE.MeshLambertMaterial({color:color||0x6a8caf}));
+ body.position.y=0.8;c.add(body);
+ const cab=new THREE.Mesh(new THREE.BoxGeometry(2,1,1.6),new THREE.MeshLambertMaterial({color:0x2a3a52}));
+ cab.position.set(-0.4,1.6,0);c.add(cab);
+ const w1=new THREE.Mesh(new THREE.CylinderGeometry(.5,.5,.5,8),new THREE.MeshLambertMaterial({color:0x222}));
+ w1.rotation.z=Math.PI/2;w1.position.set(1.2,.5,.9);c.add(w1);
+ const w2=w1.clone();w2.position.set(-1.2,.5,.9);c.add(w2);
+ const w3=w1.clone();w3.position.set(1.2,.5,-.9);c.add(w3);
+ const w4=w1.clone();w4.position.set(-1.2,.5,-.9);c.add(w4);
+ c.position.set(x,0,z);c.rotation.y=rot||0;return c;
+}
+/* 路灯 */
+function makeLamp(x,z){
+ const g=new THREE.Group();
+ const pole=new THREE.Mesh(new THREE.CylinderGeometry(.15,.2,7,6),new THREE.MeshLambertMaterial({color:0x6a7888}));
+ pole.position.y=3.5;g.add(pole);
+ const arm=new THREE.Mesh(new THREE.BoxGeometry(.2,.2,2.5),new THREE.MeshLambertMaterial({color:0x6a7888}));
+ arm.position.set(0,7,1);g.add(arm);
+ const head=new THREE.Mesh(new THREE.BoxGeometry(.6,.3,.6),new THREE.MeshBasicMaterial({color:0xfff4cc}));
+ head.position.set(0,7,2.2);g.add(head);
+ g.position.set(x,0,z);return g;
+}
+
+function mountThree(){
+ const host=document.getElementById("isoWorld");
+ if(!host||!window.THREE)return false;
+ if(T3){
+  /* 页面重渲染会清空 isoWorld：若旧画布已脱离文档，先销毁再重建 */
+  if(T3.dom&&T3.dom.isConnected)return true;
+  try{T3.destroy();}catch(e){}
+  T3=null;
+ }
+ const stage=host.parentElement;
+ const tip=document.getElementById("wb3dTip");
+ try{
+  const W=stage.clientWidth||860,H=stage.clientHeight||380;
+  const renderer=new THREE.WebGLRenderer({antialias:true,alpha:true});
+  renderer.setSize(W,H);renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,2));
+  renderer.setClearColor(0x000000,0);
+  renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+
+  const scene=new THREE.Scene();
+  scene.fog=new THREE.Fog(0x163560,260,560);
+  const cam=new THREE.PerspectiveCamera(45,W/H,0.1,1400);
+  const target=new THREE.Vector3(0,0,4);
+  const st={theta:0.15,phi:1.18,r:165},goal={theta:0.15,phi:1.18,r:165};
+
+  // 光照
+  const hemi=new THREE.HemisphereLight(0x9fc3ff,0x0a1628,0.95);scene.add(hemi);
+  const sun=new THREE.DirectionalLight(0xffffff,1.0);sun.position.set(90,130,50);
+  sun.castShadow=true;sun.shadow.mapSize.set(2048,2048);
+  sun.shadow.camera.left=-170;sun.shadow.camera.right=170;
+  sun.shadow.camera.top=170;sun.shadow.camera.bottom=-170;
+  sun.shadow.camera.far=420;sun.shadow.bias=-0.0006;
+  sun.shadow.camera.updateProjectionMatrix();
+  scene.add(sun);
+  const amb=new THREE.AmbientLight(0x3a5a8a,0.35);scene.add(amb);
+
+  const g=new THREE.Group();scene.add(g);
+
+  // 天穹
+  let skyMesh=makeSky();if(skyMesh)scene.add(skyMesh);
+  let skyNight=makeSkyNight();
+
+  // 地面
+  const gtex=groundTex();
+  const ground=new THREE.Mesh(new THREE.PlaneGeometry(1200,1200),
+   new THREE.MeshLambertMaterial({color:0x0e2138,map:gtex||undefined}));
+  ground.rotation.x=-Math.PI/2;ground.receiveShadow=true;g.add(ground);
+
+  // 中心湖
+  const lake=new THREE.Mesh(new THREE.CircleGeometry(18,32),
+   new THREE.MeshLambertMaterial({color:0x1a5a8a,transparent:true,opacity:0.75}));
+  lake.rotation.x=-Math.PI/2;lake.position.set(-12,0.05,18);g.add(lake);
+  const lakeRim=new THREE.Mesh(new THREE.RingGeometry(18,19.5,32),
+   new THREE.MeshLambertMaterial({color:0x4a6a8a,side:THREE.DoubleSide}));
+  lakeRim.rotation.x=-Math.PI/2;lakeRim.position.set(-12,0.06,18);g.add(lakeRim);
+
+  // 片区
+  ZONES.forEach(z=>{
+   const p=new THREE.Mesh(new THREE.PlaneGeometry(z.w,z.d),
+    new THREE.MeshLambertMaterial({color:z.col,transparent:true,opacity:0.10}));
+   p.rotation.x=-Math.PI/2;p.position.set(z.x,0.04,z.z);g.add(p);
+   const b=new THREE.LineLoop(new THREE.BufferGeometry().setFromPoints([
+    new THREE.Vector3(z.x-z.w/2,0.06,z.z-z.d/2),new THREE.Vector3(z.x+z.w/2,0.06,z.z-z.d/2),
+    new THREE.Vector3(z.x+z.w/2,0.06,z.z+z.d/2),new THREE.Vector3(z.x-z.w/2,0.06,z.z+z.d/2)]),
+    new THREE.LineBasicMaterial({color:z.col,transparent:true,opacity:0.5}));
+   g.add(b);
+   const lbl=makeLabel(z.name,null,true);if(lbl){lbl.position.set(z.x,7,z.z);g.add(lbl);}
+  });
+
+  // 主干道 + 次干道 + 人行道
+  function roadStrip(w,l,x,z,col){
+   const m=new THREE.Mesh(new THREE.PlaneGeometry(w,l),new THREE.MeshLambertMaterial({color:col||0x172c4e}));
+   m.rotation.x=-Math.PI/2;m.position.set(x,0.1,z);g.add(m);
+  }
+  function sidewalk(w,l,x,z){
+   const m=new THREE.Mesh(new THREE.PlaneGeometry(w,l),new THREE.MeshLambertMaterial({color:0x2a3f5c}));
+   m.rotation.x=-Math.PI/2;m.position.set(x,0.09,z);g.add(m);
+  }
+  // 京河大道（东西向）
+  roadStrip(220,12,0,8);sidewalk(220,3,0,3.5);sidewalk(220,3,0,12.5);
+  // 如意街（南北向）
+  roadStrip(12,260,0,0);sidewalk(3,260,-7.5,0);sidewalk(3,260,7.5,0);
+  // 次干道
+  roadStrip(8,180,-40,0,0x1a2e4a);roadStrip(8,180,40,0,0x1a2e4a);roadStrip(180,8,0,-40,0x1a2e4a);roadStrip(180,8,0,40,0x1a2e4a);
+  // 车道虚线
+  for(let x=-106;x<=106;x+=8){const d=new THREE.Mesh(new THREE.PlaneGeometry(4,.5),
+   new THREE.MeshBasicMaterial({color:0xFBBF24,transparent:true,opacity:.6}));
+   d.rotation.x=-Math.PI/2;d.position.set(x,.14,8);g.add(d);}
+  for(let z=-126;z<=126;z+=8){if(Math.abs(z-8)<5)continue;const d=new THREE.Mesh(new THREE.PlaneGeometry(.5,4),
+   new THREE.MeshBasicMaterial({color:0xFBBF24,transparent:true,opacity:.6}));
+   d.rotation.x=-Math.PI/2;d.position.set(0,.14,z);g.add(d);}
+  // 斑马线
+  for(let i=-6;i<=6;i+=2){const d=new THREE.Mesh(new THREE.PlaneGeometry(1.5,4),
+   new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:.5}));
+   d.rotation.x=-Math.PI/2;d.position.set(i,.15,8);g.add(d);}
+  // 路灯（沿京河大道与如意街）
+  for(let x=-90;x<=90;x+=30){g.add(makeLamp(x,15));g.add(makeLamp(x,1));}
+  for(let z=-90;z<=90;z+=30){if(Math.abs(z-8)<8)continue;g.add(makeLamp(-9,z));g.add(makeLamp(9,z));}
+
+  // 道路标签
+  const rl1=makeLabel("京河大道",null,true);if(rl1){rl1.position.set(46,3,15);rl1.scale.set(14,14*96/560,1);g.add(rl1);}
+  const rl2=makeLabel("如意街",null,true);if(rl2){rl2.position.set(-8,3,-60);rl2.scale.set(14,14*96/560,1);g.add(rl2);}
+
+  // 建筑
+  const tex=winTex(),texN=winTexNight(),pick=[];
+  const buildingMats=[];
+  B3.forEach(b=>{
+   const c=b.ref?COMPANIES.find(x=>x.id===b.ref):null;
+   const col=c?EG_COL[c.eg]:(b.col||0x4A7AB5);
+   const {grp,mat,body}=buildBuilding(b,col,tex);
+   grp.position.set(b.x,0,b.z);g.add(grp);
+   const edge=new THREE.LineSegments(new THREE.EdgesGeometry(body.geometry),
+    new THREE.LineBasicMaterial({color:0x7DD3FC,transparent:true,opacity:.5}));
+   edge.position.copy(body.position).add(new THREE.Vector3(b.x,0,b.z));g.add(edge);
+   const lbl=makeLabel(c?c.name:b.name,
+    c?("能耗 "+c.en+"万tce · 碳排 "+c.co+"万tCO₂ · 能效 "+c.eg+" 级"):"园区设施",!c);
+   if(lbl){lbl.position.set(b.x,b.h+5,b.z);g.add(lbl);}
+   body.userData={ref:c?c.id:null,name:c?c.name:b.name,edge,mat,
+    info:!c?SCEN_INFO[b.scen]:null,grp};
+   pick.push(body);buildingMats.push({mat,body,b,c});
+
+   // 停车场（每栋楼前）
+   if(b.x!==undefined){
+    const px=b.x,pz=b.z+(b.d/2)+4;
+    const lot=new THREE.Mesh(new THREE.PlaneGeometry(b.w*0.7,6),new THREE.MeshLambertMaterial({color:0x1a2a40}));
+    lot.rotation.x=-Math.PI/2;lot.position.set(px,0.08,pz);g.add(lot);
+    for(let i=-2;i<=2;i++){g.add(makeCar(px+i*4.2,pz,0,0x5a7a9a));}
+   }
+  });
+
+  // 光伏阵列（新能源片区地面 + 数据中心屋顶）
+  for(let r=0;r<4;r++)for(let i=0;i<7;i++){
+   const pv=new THREE.Mesh(new THREE.BoxGeometry(4,.2,2.6),
+    new THREE.MeshLambertMaterial({color:0x1E4E8C,emissive:0x0a2c55}));
+   pv.position.set(58+i*5.5,.6,2+r*5);pv.rotation.x=-0.5;g.add(pv);
+   // 支架
+   const st=new THREE.Mesh(new THREE.BoxGeometry(.2,.8,.2),new THREE.MeshLambertMaterial({color:0x555}));
+   st.position.set(58+i*5.5,.4,2+r*5+1);g.add(st);
+  }
+  // 数据中心屋顶光伏
+  for(let i=-3;i<=3;i++)for(let j=-2;j<=2;j++){
+   const pv=new THREE.Mesh(new THREE.BoxGeometry(3,.15,1.8),
+    new THREE.MeshLambertMaterial({color:0x1E4E8C,emissive:0x0a2c55}));
+   pv.position.set(24+i*4.5,12.3,-46+j*4);pv.rotation.x=-0.4;g.add(pv);
+  }
+
+  // 风机
+  const turbines=[];
+  [[74,-10],[86,18],[80,-2]].forEach(([x,z])=>{
+   const gp=new THREE.Group();
+   const pole=new THREE.Mesh(new THREE.CylinderGeometry(.6,.9,17,8),new THREE.MeshLambertMaterial({color:0xbfd6e8}));
+   pole.position.y=8.5;gp.add(pole);
+   const hub=new THREE.Group();hub.position.y=17;
+   for(let i=0;i<3;i++){const w=new THREE.Group();w.rotation.z=i*2.094;
+    const bl=new THREE.Mesh(new THREE.BoxGeometry(.5,7,.18),new THREE.MeshLambertMaterial({color:0xe8f4ff}));
+    bl.position.y=3.5;w.add(bl);hub.add(w);}
+   gp.add(hub);gp.position.set(x,0,z);g.add(gp);turbines.push(hub);});
+
+  // 变电站设施
+  for(let i=0;i<3;i++){const t=new THREE.Mesh(new THREE.CylinderGeometry(2,2,3.4,10),
+   new THREE.MeshLambertMaterial({color:0x6d86a8}));
+   t.position.set(-84,1.7,-12+i*6);g.add(t);}
+  const pylon=new THREE.Mesh(new THREE.BoxGeometry(.8,18,.8),new THREE.MeshLambertMaterial({color:0x7d94b4}));
+  pylon.position.set(-72,9,-14);g.add(pylon);
+  [[-72,-10],[-72,-2],[-70,-6]].forEach(([x,z],i)=>{
+   const bx=new THREE.Mesh(new THREE.BoxGeometry(3,2,6),
+    new THREE.MeshLambertMaterial({color:i%2?0x2DD4BF:0xd7e6f5}));
+   bx.position.set(x,1.2,z);g.add(bx);});
+  // 变电站围栏
+  const fenceMat=new THREE.MeshLambertMaterial({color:0x8a9aaa});
+  for(let x=-90;x<=-70;x+=3){const f=new THREE.Mesh(new THREE.BoxGeometry(.1,1.6,.1),fenceMat);f.position.set(x,.8,2);g.add(f);
+   const f2=new THREE.Mesh(new THREE.BoxGeometry(.1,1.6,.1),fenceMat);f2.position.set(x,.8,-14);g.add(f2);}
+  for(let z=-14;z<=2;z+=3){const f=new THREE.Mesh(new THREE.BoxGeometry(.1,1.6,.1),fenceMat);f.position.set(-90,.8,z);g.add(f);}
+
+  // 储能集装箱
+  [[36,-50],[40,-50],[44,-50],[48,-50],[36,-46],[40,-46],[44,-46],[48,-46]].forEach(([x,z],i)=>{
+   const bx=new THREE.Mesh(new THREE.BoxGeometry(3.2,2.4,6),
+    new THREE.MeshLambertMaterial({color:i%2?0x2DD4BF:0xe8f4ff}));
+   bx.position.set(x,1.2,z);g.add(bx);});
+
+  // 园区入口大门
+  const gateL=new THREE.Mesh(new THREE.BoxGeometry(1,6,4),new THREE.MeshLambertMaterial({color:0x4A6A8C}));
+  gateL.position.set(-8,3,-66);g.add(gateL);
+  const gateR=new THREE.Mesh(new THREE.BoxGeometry(1,6,4),new THREE.MeshLambertMaterial({color:0x4A6A8C}));
+  gateR.position.set(8,3,-66);g.add(gateR);
+  const gateTop=new THREE.Mesh(new THREE.BoxGeometry(18,2.5,1),new THREE.MeshLambertMaterial({color:0x38BDF8,emissive:0x1a5a8a}));
+  gateTop.position.set(0,7.5,-66);g.add(gateTop);
+  const gateLbl=makeLabel("苏银产业园",null,false);if(gateLbl){gateLbl.position.set(0,12,-66);gateLbl.scale.set(16,16*96/560,1);g.add(gateLbl);}
+  // 旗杆
+  [-4,0,4].forEach(x=>{const fp=new THREE.Mesh(new THREE.CylinderGeometry(.08,.08,9,6),new THREE.MeshLambertMaterial({color:0xcccccc}));
+   fp.position.set(x,4.5,-62);g.add(fp);});
+
+  // 绿化（沿路与散布）
+  const treePos=[
+   [-40,14],[-52,22],[-64,28],[14,26],[-14,-32],[-44,-8],[36,26],[52,30],[-72,50],[64,-54],[-20,-66],[82,-22],[-8,-58],[20,20],
+   [-30,16],[-16,14],[0,24],[8,30],[44,16],[56,18],[70,22],[-66,18],[-54,-12],[38,-18],[16,-58],[-90,-20],[88,-40],
+   [-110,30],[-110,-30],[110,40],[110,-20],[-100,60],[100,60]
+  ];
+  treePos.forEach(([x,z],i)=>g.add(makeTree(i%3,x,z)));
+  // 沿京河大道行道树
+  for(let x=-100;x<=100;x+=14){if(Math.abs(x)<10)continue;g.add(makeTree(1,x,16));g.add(makeTree(1,x,0));}
+  // 湖边灌木
+  for(let a=0;a<360;a+=30){const r=21,x=-12+Math.cos(a*Math.PI/180)*r,z=18+Math.sin(a*Math.PI/180)*r;g.add(makeTree(2,x,z));}
+
+  // 排放粒子（企业上方，颜色对应能效等级）
+  const emitters=[];
+  B3.filter(b=>b.ref).forEach(b=>{
+   const c=COMPANIES.find(x=>x.id===b.ref);if(!c)return;
+   const pcol=EG_PARTICLE[c.eg]||0xFBBF24;
+   for(let i=0;i<8;i++){
+    const p=new THREE.Mesh(new THREE.SphereGeometry(.4,6,6),new THREE.MeshBasicMaterial({color:pcol,transparent:true,opacity:.7}));
+    p.position.set(b.x+(Math.random()-.5)*b.w*0.6,b.h+2,b.z+(Math.random()-.5)*b.d*0.6);
+    p.userData={baseY:b.h+2,speed:0.3+Math.random()*0.4,phase:Math.random()*6.28,amp:0.5+Math.random()*0.5};
+    g.add(p);emitters.push(p);
+   }
+  });
+
+  // 数据流光点（甘露变电站 → 各企业）
+  const pulses=[[-80,-6,-56,-34],[-80,-6,-26,-16],[-80,-6,24,-46],[-80,-6,62,-30],[-80,-6,30,42],[-80,-6,-60,40],[-80,-6,-26,42]]
+   .map((p,i)=>({a:new THREE.Vector3(p[0],2.4,p[1]),b:new THREE.Vector3(p[2],2.4,p[3]),
+    mesh:new THREE.Mesh(new THREE.SphereGeometry(.8,8,8),new THREE.MeshBasicMaterial({color:0xFBBF24})),ph:i*0.13}));
+  pulses.forEach(p=>g.add(p.mesh));
+
+  /* ============ 数字孪生增强层 ============ */
+  let twinOn=true;
+  // ① 企业建筑顶部数据光环（双层旋转环，颜色=能效等级）
+  const halos=[];
+  B3.filter(b=>b.ref).forEach(b=>{
+   const c=COMPANIES.find(x=>x.id===b.ref);if(!c)return;
+   const hcol=EG_COL[c.eg]||0x38BDF8;
+   const rg=new THREE.Group();
+   const r1=new THREE.Mesh(new THREE.RingGeometry(Math.max(b.w,b.d)*0.30,Math.max(b.w,b.d)*0.34,48),
+    new THREE.MeshBasicMaterial({color:hcol,transparent:true,opacity:0.8,side:THREE.DoubleSide,depthWrite:false}));
+   const r2=new THREE.Mesh(new THREE.RingGeometry(Math.max(b.w,b.d)*0.42,Math.max(b.w,b.d)*0.44,48,1,0,Math.PI*0.6),
+    new THREE.MeshBasicMaterial({color:0x7DD3FC,transparent:true,opacity:0.9,side:THREE.DoubleSide,depthWrite:false}));
+   r1.rotation.x=r2.rotation.x=-Math.PI/2;
+   rg.add(r1);rg.add(r2);
+   rg.position.set(b.x,b.h+3.2,b.z);g.add(rg);
+   halos.push({rg,r2,speed:0.5+Math.random()*0.5});
+  });
+  // ② 企业悬浮孪生数据面板（HUD 风格 Canvas 精灵）
+  function twinPanel(c){
+   try{
+    const cv=document.createElement("canvas");cv.width=360;cv.height=210;
+    const ctx=cv.getContext("2d");if(!ctx)return null;
+    ctx.fillStyle="rgba(4,16,34,.78)";ctx.fillRect(0,0,360,210);
+    ctx.fillStyle="rgba(45,212,191,.9)";ctx.fillRect(0,0,8,210);
+    ctx.strokeStyle="rgba(96,165,250,.7)";ctx.lineWidth=2;ctx.strokeRect(1,1,358,208);
+    ctx.fillStyle="#EAF6FF";ctx.font="bold 30px 'Microsoft YaHei',sans-serif";ctx.fillText(c.name,26,46);
+    ctx.font="22px 'Microsoft YaHei',sans-serif";
+    ctx.fillStyle="#7DD3FC";ctx.fillText("综合能耗",26,92);ctx.fillStyle="#FFD666";ctx.fillText(c.en+" 万tce",150,92);
+    ctx.fillStyle="#7DD3FC";ctx.fillText("碳排量",26,132);ctx.fillStyle="#FFD666";ctx.fillText(c.co+" 万tCO₂",150,132);
+    ctx.fillStyle="#7DD3FC";ctx.fillText("能效等级",26,172);
+    const ec={A:"#4ADE80",B:"#FBBF24",C:"#F87171"}[c.eg]||"#FBBF24";
+    ctx.fillStyle=ec;ctx.fillText(c.eg+" 级 · "+(c.eg==="A"?"行业领跑":c.eg==="B"?"达标运行":"重点管控"),150,172);
+    const t=new THREE.CanvasTexture(cv);
+    const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:t,transparent:true,depthTest:false}));
+    sp.scale.set(24,24*210/360,1);
+    return sp;
+   }catch(e){return null;}
+  }
+  const panels=[];
+  B3.filter(b=>b.ref).forEach(b=>{
+   const c=COMPANIES.find(x=>x.id===b.ref);if(!c)return;
+   const sp=twinPanel(c);
+   if(sp){sp.position.set(b.x+b.w*0.75,b.h*0.68,b.z);g.add(sp);
+    panels.push({sp,baseY:sp.position.y,ph:Math.random()*6.28});}
+  });
+  // ③ 园区地面扩散扫描环（自园区中心向外脉冲）
+  const scanRings=[];
+  for(let i=0;i<3;i++){
+   const r=new THREE.Mesh(new THREE.RingGeometry(1,1.05,64),
+    new THREE.MeshBasicMaterial({color:0x38BDF8,transparent:true,opacity:0.45,side:THREE.DoubleSide,depthWrite:false}));
+   r.rotation.x=-Math.PI/2;r.position.set(0,0.28,4);r.userData={ph:i/3};
+   g.add(r);scanRings.push(r);
+  }
+  // ④ 甘露变电站雷达扫描扇面（旋转渐变扇形）
+  let radarGroup=null;
+  try{
+   const cv=document.createElement("canvas");cv.width=256;cv.height=256;
+   const ctx=cv.getContext("2d");
+   const grd=ctx.createRadialGradient(128,128,0,128,128,128);
+   grd.addColorStop(0,"rgba(45,212,191,.55)");grd.addColorStop(0.75,"rgba(45,212,191,.12)");grd.addColorStop(1,"rgba(45,212,191,0)");
+   ctx.fillStyle=grd;ctx.beginPath();ctx.moveTo(128,128);ctx.arc(128,128,128,-Math.PI/2,-Math.PI/2+Math.PI/3);ctx.closePath();ctx.fill();
+   ctx.strokeStyle="rgba(125,211,252,.9)";ctx.lineWidth=3;
+   ctx.beginPath();ctx.moveTo(128,128);ctx.lineTo(128,0);ctx.stroke();
+   radarGroup=new THREE.Group();
+   const radar=new THREE.Mesh(new THREE.PlaneGeometry(70,70),
+    new THREE.MeshBasicMaterial({map:new THREE.CanvasTexture(cv),transparent:true,depthWrite:false,opacity:0.85}));
+   radar.rotation.x=-Math.PI/2;radarGroup.add(radar);
+   radarGroup.position.set(-80,0.5,-6);g.add(radarGroup);
+  }catch(e){}
+
+  /* —— 交互：轨道控制（拖拽旋转 / 滚轮缩放 / 点击下钻） —— */
+  const dom=renderer.domElement;
+  const ray=new THREE.Raycaster(),ndc=new THREE.Vector2();
+  let drag=false,lx=0,ly=0,moved=0,hovered=null;
+  function castAt(e){
+   const rc=dom.getBoundingClientRect();
+   ndc.x=(e.clientX-rc.left)/rc.width*2-1;ndc.y=-((e.clientY-rc.top)/rc.height*2+1);
+   ray.setFromCamera(ndc,cam);
+   const hits=ray.intersectObjects(pick,false);
+   return hits.length?hits[0].object:null;
+  }
+  function setHover(o,e){
+   if(hovered===o){if(o&&e&&tip){tip.style.left=(e.clientX+14)+"px";tip.style.top=(e.clientY+10)+"px";}return;}
+   if(hovered){hovered.userData.edge.material.color.set(0x7DD3FC);hovered.material.emissive.setHex(0x0b1a2e);}
+   hovered=o;
+   if(o){o.userData.edge.material.color.set(0x38BDF8);o.material.emissive.setHex(0x0e3c66);
+    const u=o.userData;
+    tip.innerHTML=u.ref?`<b>${u.name}</b><br>点击建筑下钻企业能碳画像`:u.info?`<b>${u.info.t}</b><br>点击查看设施介绍`:u.name;
+    tip.style.display="block";
+    if(e){tip.style.left=(e.clientX+14)+"px";tip.style.top=(e.clientY+10)+"px";}
+    dom.style.cursor="pointer";
+   }else{tip.style.display="none";dom.style.cursor="grab";}
+  }
+  const onMove=e=>{
+   if(drag){
+    const dx=e.clientX-lx,dy=e.clientY-ly;lx=e.clientX;ly=e.clientY;moved+=Math.abs(dx)+Math.abs(dy);
+    goal.theta-=dx*0.006;goal.phi=Math.min(1.5,Math.max(0.18,goal.phi-dy*0.005));
+    tip.style.display="none";return;}
+   setHover(castAt(e),e);};
+  const onDown=e=>{drag=true;moved=0;lx=e.clientX;ly=e.clientY;dom.style.cursor="grabbing";};
+  const onUp=()=>{drag=false;dom.style.cursor="grab";};
+  const onWheel=e=>{e.preventDefault();goal.r=Math.min(380,Math.max(60,goal.r*(1+e.deltaY*0.0012)));};
+  const onClick=e=>{if(moved>6)return;const o=castAt(e);if(!o)return;
+   const u=o.userData;
+   if(u.ref)coModal(u.ref);
+   else if(u.info)showModal("园区设施 · "+u.info.t,`<table>${row("设施名称",u.info.t,"三维实景建模设施")}</table><div class="concl"><b>设施说明：</b>${u.info.d}</div>`);};
+  const onLeave=()=>setHover(null);
+  const onResize=()=>{const w=stage.clientWidth||W,h=stage.clientHeight||H;
+   cam.aspect=w/h;cam.updateProjectionMatrix();renderer.setSize(w,h);};
+  dom.addEventListener("pointerdown",onDown);
+  dom.addEventListener("pointermove",onMove);
+  window.addEventListener("pointerup",onUp);
+  dom.addEventListener("wheel",onWheel,{passive:false});
+  dom.addEventListener("click",onClick);
+  dom.addEventListener("pointerleave",onLeave);
+  window.addEventListener("resize",onResize);
+
+  /* 动画循环 */
+  let raf=0,last=performance.now();
+  const clock0=performance.now();
+  function animate(now){
+   raf=requestAnimationFrame(animate);
+   const dt=Math.min((now-last)/1000,.1);last=now;
+   const el=(now-clock0)/1000;
+   st.theta+=(goal.theta-st.theta)*.07;st.phi+=(goal.phi-st.phi)*.07;st.r+=(goal.r-st.r)*.07;
+   cam.position.set(
+    target.x+st.r*Math.sin(st.phi)*Math.sin(st.theta),
+    target.y+st.r*Math.cos(st.phi),
+    target.z+st.r*Math.sin(st.phi)*Math.cos(st.theta));
+   cam.lookAt(target);
+   turbines.forEach(h=>h.rotation.z+=dt*1.1);
+   pulses.forEach(p=>{const t=(el*0.11+p.ph)%1;
+    p.mesh.position.lerpVectors(p.a,p.b,t);
+    p.mesh.scale.setScalar(0.7+0.5*Math.sin(t*Math.PI));});
+   emitters.forEach(p=>{const u=p.userData;
+    p.position.y=u.baseY+Math.sin(el*u.speed+u.phase)*u.amp*2;
+    p.position.x+=Math.sin(el*0.5+u.phase)*0.01;
+    p.material.opacity=0.5+0.3*Math.sin(el*u.speed+u.phase);});
+   halos.forEach(h=>{h.rg.rotation.y+=dt*h.speed*0.7;h.r2.rotation.z+=dt*1.4;});
+   panels.forEach(p=>{p.sp.position.y=p.baseY+Math.sin(el*0.8+p.ph)*0.8;});
+   scanRings.forEach(r=>{const t=(el*0.14+r.userData.ph)%1;
+    const rad=8+t*130;r.scale.set(rad,rad,1);r.material.opacity=0.45*(1-t);});
+   if(radarGroup)radarGroup.rotation.y-=dt*0.9;
+   renderer.render(scene,cam);}
+  raf=requestAnimationFrame(animate);
+
+  /* 成功后替换 SVG 回退内容 */
+  host.style.transform="none";host.style.width="100%";host.style.height="100%";
+  host.innerHTML="";host.appendChild(dom);
+  dom.style.cssText="width:100%;height:100%;display:block;cursor:grab;touch-action:none;";
+
+  T3={dom:dom,scene:scene,destroy(){
+   cancelAnimationFrame(raf);
+   dom.removeEventListener("pointerdown",onDown);dom.removeEventListener("pointermove",onMove);
+   window.removeEventListener("pointerup",onUp);dom.removeEventListener("wheel",onWheel);
+   dom.removeEventListener("click",onClick);dom.removeEventListener("pointerleave",onLeave);
+   window.removeEventListener("resize",onResize);
+   renderer.dispose();host.innerHTML="";tip.style.display="none";},
+   preset(v){const p=CAM_PRESET[v]||CAM_PRESET.a;goal.theta=p[0];goal.phi=p[1];goal.r=p[2];},
+   zoom(z){goal.r=Math.min(380,Math.max(60,15000/z));},
+   toggleFx(){twinOn=!twinOn;
+    halos.forEach(h=>h.rg.visible=twinOn);
+    panels.forEach(p=>p.sp.visible=twinOn);
+    scanRings.forEach(r=>r.visible=twinOn);
+    if(radarGroup)radarGroup.visible=twinOn;
+    return twinOn;},
+   toggleNight(){
+    isNight=!isNight;
+    if(isNight){
+     if(skyNight){scene.remove(skyMesh);scene.add(skyNight);skyMesh=skyNight;}
+     hemi.intensity=0.3;sun.intensity=0.2;amb.intensity=0.5;
+     buildingMats.forEach(({mat,b})=>{if(texN)mat.map=texN;mat.emissive.setHex(0x1a3a5c);mat.emissiveIntensity=0.6;mat.needsUpdate=true;});
+     scene.fog.color.setHex(0x040a18);
+    }else{
+     if(skyMesh!==makeSky()){scene.remove(skyNight);skyMesh=makeSky();scene.add(skyMesh);}
+     hemi.intensity=0.95;sun.intensity=1.0;amb.intensity=0.35;
+     buildingMats.forEach(({mat,b})=>{if(tex)mat.map=tex;mat.emissive.setHex(0x0b1a2e);mat.emissiveIntensity=1;mat.needsUpdate=true;});
+     scene.fog.color.setHex(0x163560);
+    }
+   }};
+  return true;
+ }catch(e){
+  console.warn("三维实景初始化失败，保留示意图回退：",e&&e.message);
+  if(tip)tip.style.display="none";
+  T3=null;return false;}
+}
+window.mountThree=mountThree;
+window.__T3=()=>T3; /* 调试钩子 */
+
+/* 视角 / 缩放 / 昼夜接管（保留 CSS 回退） */
+const _isoView7=window.isoView,_isoZoom7=window.isoZoom;
+const CAM_PRESET={a:[0.15,1.18,165],b:[2.4,0.55,250],c:[-0.42,1.35,110]};
+function t3Preset(v){if(T3&&T3.preset)T3.preset(v);}
+function t3Zoom(z){if(T3&&T3.zoom)T3.zoom(z);}
+window.isoView=v=>{
+ document.querySelectorAll("[data-iso]").forEach(b=>b.classList.toggle("on",b.dataset.iso===v));
+ const el=document.getElementById("isoWorld");if(el)el.dataset.view=v;
+ if(T3)t3Preset(v);else if(_isoView7)_isoView7(v);};
+window.isoZoom=z=>{const el=document.getElementById("isoWorld");if(el)el.dataset.z=z;
+ if(T3)t3Zoom(z);else if(_isoZoom7)_isoZoom7(z);};
+window.toggleNight=()=>{if(T3&&T3.toggleNight)T3.toggleNight();};
+window.toggleTwinFx=()=>{if(T3&&T3.toggleFx)T3.toggleFx();};
+
+/* 演示导览更新 */
+if(window.DEMO_STEPS&&DEMO_STEPS[0])
+ DEMO_STEPS[0].pts="左侧导航点击「能碳总览驾驶舱」进入全屏大屏模式（ESC / 右上按钮返回系统）→ 数字孪生园区（真实苏银产业园布局：拖拽旋转/滚轮缩放/视角A·B·C/昼夜切换/扫描环·雷达扇面·数据光环·悬浮孪生面板/点击建筑下钻真实企业）→ 能流/碳流图（切换企业/时间维度）→ 核心指标点击弹历年趋势 → 信息概览区 8 卡片专题分析";
+
+/* 驾驶舱渲染接管：换提示文案 + 工具栏/图例/说明挂进三维卡片内（大屏布局不再散落页尾） */
+const _prevDash=PAGES.dashboard.render;
+PAGES.dashboard.render=()=>{
+ let html=_prevDash()
+  .replace("高度=综合能耗 · 颜色=能效等级 · 点击建筑下钻企业画像",
+   "数字孪生园区 · 建筑高度=综合能耗 · 颜色=能效等级；拖拽旋转 / 滚轮缩放 / 点击建筑下钻")
+  .replace('<div id="isoToolbarSlot"></div>',`<div class="iso-toolbar">
+     <button class="btn ghost" onclick="toggleNight()">昼夜切换</button>
+     <button class="btn ghost" onclick="toggleTwinFx()">孪生特效</button>
+    </div>
+    <div class="iso-leg">
+     <span><i style="background:#2DD4BF"></i>能效A级</span>
+     <span><i style="background:#FBBF24"></i>能效B级</span>
+     <span><i style="background:#F87171"></i>能效C级</span>
+     <span><i style="background:#FBBF24"></i>能源数据流</span>
+     <span><i style="background:#4ADE80"></i>排放粒子（绿低/黄中/红高）</span>
+     <span><i style="background:#38BDF8"></i>扫描环 · 雷达扇面 · 数据光环</span>
+    </div>`);
+ setTimeout(()=>{if(window.THREE)mountThree();},80);
+ return html;};
+
+/* 重新渲染当前页（驾驶舱三维实景即刻生效），并保持用户已切换的页签不被覆盖（防加载期吞点击） */
+go(curPage);
+(function(){const t=document.querySelector(".tab.on");if(t){const R=(typeof RENDERERS!=="undefined")&&RENDERERS[t.dataset.t];if(R){const b=document.getElementById("tabBody");if(b)b.innerHTML=R();}}})();
+})();
+
+/* ================= 自适应布局 + 界面美化补丁（在所有模块之后执行） ================= */
+document.head.insertAdjacentHTML("beforeend",`<style>
+/* ---- 图表/图片自适应 ---- */
+.modal{width:min(900px,94vw)!important;max-height:88vh;}
+.ech{width:100%!important;min-height:60px;}
+.map-wrap,.chart{width:100%;overflow:hidden;}
+.map-svg{display:block;width:100%;height:auto;border-radius:10px;box-shadow:0 10px 26px rgba(2,8,20,.45),inset 0 1px 0 rgba(255,255,255,.04);}
+.iso-stage{max-width:100%;}
+.iso-stage svg,.iso-stage canvas{max-width:100%;}
+/* 图中文字：加描边底衬，避免与色带/底图撞色 */
+.dot-label,.dist-lb,.node-t,.flow-lb{font-family:"Microsoft YaHei","PingFang SC",sans-serif;letter-spacing:.4px;}
+.dot-label{paint-order:stroke;stroke:rgba(8,18,34,.9);stroke-width:3px;stroke-linejoin:round;}
+.dist-lb{paint-order:stroke;stroke:rgba(8,18,34,.75);stroke-width:3px;}
+.node-t,.flow-lb{paint-order:stroke;stroke:rgba(10,22,40,.55);stroke-width:2.5px;}
+.flow-pill rect{filter:drop-shadow(0 2px 4px rgba(2,8,20,.45));}
+.flow-src{transition:filter .2s;}
+.map-point:hover .flow-src{stroke:#7DD3FC;filter:drop-shadow(0 0 6px rgba(56,189,248,.5));}
+/* ---- 细节美化 ---- */
+.kpi .v{font-variant-numeric:tabular-nums;}
+.card h3{letter-spacing:.4px;}
+.card>.legend:last-child{margin-bottom:-2px;}
+table td:first-child{color:#C7DBF0;}
+.concl{margin-top:8px;}
+.sub2{display:flex;align-items:center;gap:8px;letter-spacing:.3px;}
+.sub2::before{content:"";width:3px;height:12px;border-radius:2px;background:linear-gradient(180deg,#38BDF8,#2DD4BF);}
+.progress{background:rgba(30,58,92,.7);}
+.progress i{background:linear-gradient(90deg,#2DD4BF,#38BDF8);box-shadow:0 0 8px rgba(45,212,191,.5);}
+.progress.warn i{background:linear-gradient(90deg,#FBBF24,#F59E0B);box-shadow:0 0 8px rgba(251,191,36,.45);}
+/* ---- 响应式：网格逐级折叠，图表随容器收放 ---- */
+@media(max-width:1500px){.kpis{grid-template-columns:repeat(5,1fr)!important;}}
+@media(max-width:1360px){
+ .g4{grid-template-columns:1fr 1fr!important;}
+ .kpis{grid-template-columns:repeat(4,1fr)!important;}
+ .core-strip{grid-template-columns:1fr 1fr!important;}
+}
+@media(max-width:1100px){.g3{grid-template-columns:1fr 1fr!important;}}
+@media(max-width:860px){
+ .g2,.g3,.g4{grid-template-columns:1fr!important;}
+ .kpis{grid-template-columns:repeat(2,1fr)!important;}
+ .core-strip{grid-template-columns:1fr!important;}
+ .content{padding:12px;}
+}
+</style>`);
+
+/* ---- 页面切换 / 窗口尺寸变化后：补渲染排队图表 + 重算图表尺寸 + 三维园区整体缩放 ---- */
+(function(){
+ function refit(){
+  try{flushCharts();}catch(e){}
+  try{resizeCharts();}catch(e){}
+  try{if(window.isoApply)isoApply();}catch(e){}
+ }
+ const _go=window.go;
+ window.go=function(p){const r=_go(p);setTimeout(refit,110);setTimeout(refit,420);return r;};
+ window.addEventListener("resize",function(){setTimeout(refit,120);});
+ /* 首次进入：等布局稳定后统一校一次尺寸 */
+ setTimeout(refit,600);
+})();
+
